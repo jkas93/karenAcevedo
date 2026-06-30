@@ -56,9 +56,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-gray-200 p-4 md:p-6 flex flex-col shrink-0 sticky top-0 z-50">
-        <div className="flex items-center justify-between mb-0 md:mb-10">
+      
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4 sticky top-0 z-30">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/5 rounded-full w-10 h-10 flex items-center justify-center p-1 shrink-0">
+            <Image src="/brazo.png" alt="Logo" width={32} height={32} className="w-full h-full object-contain" />
+          </div>
+          <span className="font-heading font-black text-xl tracking-tighter text-primary-dark leading-none">
+            KAREN
+          </span>
+        </div>
+        <button 
+          className="p-2 text-gray-500 hover:bg-slate-100 rounded-lg"
+          onClick={() => setMenuOpen(true)}
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Mobile Overlay */}
+      {menuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-40 md:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar (Drawer on mobile, Static on desktop) */}
+      <aside 
+        className={`fixed md:sticky md:top-0 inset-y-0 right-0 z-50 w-72 md:w-64 bg-white md:border-r border-gray-200 p-6 flex flex-col shrink-0 h-screen transform transition-transform duration-300 ease-in-out ${
+          menuOpen ? "translate-x-0 shadow-2xl" : "translate-x-full md:translate-x-0 md:shadow-none"
+        }`}
+      >
+        <div className="flex items-center justify-between md:justify-start gap-3 mb-10">
           <div className="flex items-center gap-3">
             <div className="bg-primary/5 rounded-full w-10 h-10 flex items-center justify-center p-1 shrink-0">
               <Image src="/brazo.png" alt="Logo" width={32} height={32} className="w-full h-full object-contain" />
@@ -70,21 +101,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           
-          {/* Hamburger button for mobile */}
           <button 
             className="md:hidden p-2 text-gray-500 hover:bg-slate-100 rounded-lg"
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => setMenuOpen(false)}
           >
-            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            <X size={24} />
           </button>
         </div>
         
-        <div className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col flex-1 mt-6 md:mt-0`}>
+        <div className="flex flex-col flex-1">
           <nav className="flex-1 space-y-2">
             <Link 
               href="/dashboard" 
               onClick={() => setMenuOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname === '/dashboard' ? 'bg-blue-50 text-primary-dark font-bold border-l-4 md:border-l-0 md:border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
+              className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname === '/dashboard' ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
             >
               <Users size={20} className={pathname === '/dashboard' ? 'text-primary' : 'text-gray-400'} />
               Voluntarios
@@ -94,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link 
                 href="/dashboard/configuracion" 
                 onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/configuracion') ? 'bg-blue-50 text-primary-dark font-bold border-l-4 md:border-l-0 md:border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
+                className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/configuracion') ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
               >
                 <Settings size={20} className={pathname.includes('/dashboard/configuracion') ? 'text-primary' : 'text-gray-400'} />
                 Configuración
@@ -105,7 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link 
                 href="/dashboard/usuarios" 
                 onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/usuarios') ? 'bg-blue-50 text-primary-dark font-bold border-l-4 md:border-l-0 md:border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
+                className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/usuarios') ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
               >
                 <Users size={20} className={pathname.includes('/dashboard/usuarios') ? 'text-primary' : 'text-gray-400'} />
                 Gestión de Accesos
@@ -113,8 +143,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </nav>
 
-          <div className="pt-6 border-t border-gray-100 mt-6 md:mt-auto">
-            <div className="flex items-center justify-between px-2 md:px-0">
+          <div className="pt-6 border-t border-gray-100 mt-auto">
+            <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 font-medium truncate max-w-[150px]">DNI: {user.email?.split('@')[0]}</span>
               <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2" title="Cerrar sesión">
                 <span className="text-sm md:hidden font-medium">Salir</span>

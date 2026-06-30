@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   keywords: ["Karen Acevedo", "Chaclacayo", "Elecciones 2027", "Alcaldesa Chaclacayo", "Fuerza Ciudadana", "Candidata Chaclacayo", "Seguridad Chaclacayo", "Municipalidad de Chaclacayo"],
   authors: [{ name: "Karen Acevedo" }],
   openGraph: {
-    title: "Karen Acevedo 2027 | Tu Próxima Alcaldesa",
-    description: "Conoce el plan de gobierno que transformará Chaclacayo con seguridad, orden y oportunidades.",
+    title: "Karen Acevedo 2027 | Alcaldesa Chaclacayo",
+    description: "Gobierno con Seguridad, Orden y Desarrollo continuo para todos los vecinos.",
     url: "https://karenacevedo.vercel.app",
     siteName: "Campaña Karen Acevedo 2027",
     images: [
