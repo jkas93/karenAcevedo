@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -11,6 +11,10 @@ const openSans = Open_Sans({
   subsets: ["latin"],
   variable: "--font-open-sans",
 });
+
+export const viewport: Viewport = {
+  themeColor: "#0070C0",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://karenacevedo.vercel.app"),
