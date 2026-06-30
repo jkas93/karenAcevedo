@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { Users, UserPlus, Search, ShieldCheck, Mail, MapPin, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Search, ShieldCheck, MapPin, Loader2, X } from 'lucide-react';
 import { electoralService, LocalVotacion, Mesa } from '@/lib/firebase/electoral-service';
 
 export default function GestionPersonerosPage() {
@@ -12,6 +12,16 @@ export default function GestionPersonerosPage() {
   const [locales, setLocales] = useState<LocalVotacion[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Modales
+  const [showNuevoModal, setShowNuevoModal] = useState(false);
+  const [showAsignarModal, setShowAsignarModal] = useState(false);
+  const [selectedPersonero, setSelectedPersonero] = useState<any>(null);
+
+  // Formularios
+  const [nuevoForm, setNuevoForm] = useState({ nombre: '', dni: '', telefono: '', contrasena: '' });
+  const [asignarForm, setAsignarForm] = useState({ local_id: '', mesa_id: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Conectar con Firebase en tiempo real
   useEffect(() => {
@@ -44,14 +54,56 @@ export default function GestionPersonerosPage() {
 
   const asignadosCount = personeros.filter(p => getMesaAsignada(p.uid)).length;
 
+  const handleCrearPersonero = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await electoralService.crearPersonero(nuevoForm);
+      setShowNuevoModal(false);
+      setNuevoForm({ nombre: '', dni: '', telefono: '', contrasena: '' });
+      alert("Personero creado exitosamente.");
+    } catch (error: any) {
+      alert("Error al crear personero: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAsignarMesa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asignarForm.mesa_id || !selectedPersonero) return;
+    
+    setIsSubmitting(true);
+    try {
+      await electoralService.asignarMesa(asignarForm.mesa_id, selectedPersonero.uid);
+      setShowAsignarModal(false);
+      alert("Mesa asignada correctamente.");
+    } catch (error: any) {
+      alert("Error al asignar mesa: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openAsignarModal = (personero: any) => {
+    setSelectedPersonero(personero);
+    const mesaActual = getMesaAsignada(personero.uid);
+    if (mesaActual) {
+      setAsignarForm({ local_id: mesaActual.local_id, mesa_id: mesaActual.id });
+    } else {
+      setAsignarForm({ local_id: '', mesa_id: '' });
+    }
+    setShowAsignarModal(true);
+  };
+
   return (
-    <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
+    <div className="p-6 space-y-6 max-w-[1200px] mx-auto relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">Gestión de Personeros</h1>
           <p className="text-slate-500">Asigna y administra a los responsables de cada mesa de sufragio.</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 flex gap-2 shadow-sm">
+        <Button onClick={() => setShowNuevoModal(true)} className="bg-blue-600 hover:bg-blue-700 flex gap-2 shadow-sm">
           <UserPlus size={18} />
           Nuevo Personero
         </Button>
@@ -166,7 +218,7 @@ export default function GestionPersonerosPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                            <Button onClick={() => openAsignarModal(personero)} variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50">
                               {isAsignado ? 'Cambiar Mesa' : 'Asignar Mesa'}
                             </Button>
                           </td>
@@ -185,6 +237,97 @@ export default function GestionPersonerosPage() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Modal Nuevo Personero */}
+      {showNuevoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="font-bold text-lg">Registrar Personero</h3>
+              <button onClick={() => setShowNuevoModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCrearPersonero} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Nombre Completo</label>
+                <input required type="text" className="w-full border rounded-lg p-2.5 text-sm" value={nuevoForm.nombre} onChange={(e) => setNuevoForm({...nuevoForm, nombre: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">DNI</label>
+                <input required type="text" maxLength={8} className="w-full border rounded-lg p-2.5 text-sm" value={nuevoForm.dni} onChange={(e) => setNuevoForm({...nuevoForm, dni: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Celular</label>
+                <input required type="text" className="w-full border rounded-lg p-2.5 text-sm" value={nuevoForm.telefono} onChange={(e) => setNuevoForm({...nuevoForm, telefono: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Contraseña por defecto</label>
+                <input required type="text" className="w-full border rounded-lg p-2.5 text-sm" value={nuevoForm.contrasena} onChange={(e) => setNuevoForm({...nuevoForm, contrasena: e.target.value})} />
+              </div>
+              <div className="pt-2 flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setShowNuevoModal(false)}>Cancelar</Button>
+                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Crear Cuenta'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Asignar Mesa */}
+      {showAsignarModal && selectedPersonero && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="font-bold text-lg">Asignar Mesa</h3>
+              <button onClick={() => setShowAsignarModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bg-slate-50 p-4 border-b">
+              <p className="text-sm font-medium">{selectedPersonero.nombre}</p>
+              <p className="text-xs text-slate-500">DNI: {selectedPersonero.dni}</p>
+            </div>
+            <form onSubmit={handleAsignarMesa} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Local de Votación</label>
+                <select 
+                  required 
+                  className="w-full border rounded-lg p-2.5 text-sm" 
+                  value={asignarForm.local_id} 
+                  onChange={(e) => setAsignarForm({ local_id: e.target.value, mesa_id: '' })}
+                >
+                  <option value="">Seleccione un colegio...</option>
+                  {locales.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Mesa de Sufragio</label>
+                <select 
+                  required 
+                  disabled={!asignarForm.local_id}
+                  className="w-full border rounded-lg p-2.5 text-sm disabled:bg-slate-100" 
+                  value={asignarForm.mesa_id} 
+                  onChange={(e) => setAsignarForm({ ...asignarForm, mesa_id: e.target.value })}
+                >
+                  <option value="">Seleccione una mesa...</option>
+                  {mesas.filter(m => m.local_id === asignarForm.local_id).map(m => (
+                    <option key={m.id} value={m.id}>Mesa {m.numero} {m.personero_uid && m.personero_uid !== selectedPersonero.uid ? '(Ocupada)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="pt-2 flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setShowAsignarModal(false)}>Cancelar</Button>
+                <Button type="submit" disabled={isSubmitting || !asignarForm.mesa_id} className="bg-blue-600 hover:bg-blue-700">
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Asignación'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

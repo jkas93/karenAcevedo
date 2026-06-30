@@ -77,6 +77,40 @@ export default function DashboardPage() {
     }
   };
 
+  const exportToCSV = () => {
+    if (voluntarios.length === 0) {
+      alert("No hay datos para exportar");
+      return;
+    }
+
+    const headers = ["Nombre", "DNI", "Teléfono", "Zona", "Tipo de Ayuda", "Estado", "Fecha Registro"];
+    const csvRows = [];
+    csvRows.push(headers.join(","));
+
+    filteredVoluntarios.forEach(v => {
+      const fecha = v.fecha ? new Date(v.fecha.seconds * 1000).toLocaleDateString('es-PE') : 'Reciente';
+      const row = [
+        `"${v.nombre || ''}"`,
+        `"${v.dni || ''}"`,
+        `"${v.telefono || ''}"`,
+        `"${v.zona || ''}"`,
+        `"${v.ayuda || ''}"`,
+        `"${v.estado || 'pendiente'}"`,
+        `"${fecha}"`
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `voluntarios_fuerza_ciudadana_${new Date().toLocaleDateString('es-PE')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
@@ -84,7 +118,10 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-black text-dark mb-2">Base de Voluntarios</h1>
           <p className="text-text">Gestiona los ciudadanos que se han inscrito para ayudar en la campaña.</p>
         </div>
-        <button className="flex items-center gap-2 bg-secondary text-dark font-bold px-5 py-2.5 rounded-xl hover:bg-yellow-400 transition-all shadow-sm">
+        <button 
+          onClick={exportToCSV}
+          className="flex items-center gap-2 bg-secondary text-dark font-bold px-5 py-2.5 rounded-xl hover:bg-yellow-400 transition-all shadow-sm"
+        >
           <Download size={18} /> Exportar CSV
         </button>
       </header>
