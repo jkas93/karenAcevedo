@@ -13,7 +13,7 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://karenacevedo.com"),
+  metadataBase: new URL("https://karenacevedo.vercel.app"),
   title: "Karen Acevedo 2027 | Fuerza Ciudadana Chaclacayo",
   description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030 de la candidata Karen Acevedo. Seguridad, orden y desarrollo continuo para todos los vecinos.",
   keywords: ["Karen Acevedo", "Chaclacayo", "Elecciones 2027", "Alcaldesa Chaclacayo", "Fuerza Ciudadana", "Candidata Chaclacayo", "Seguridad Chaclacayo", "Municipalidad de Chaclacayo"],
@@ -21,13 +21,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Karen Acevedo 2027 | Tu Próxima Alcaldesa",
     description: "Conoce el plan de gobierno que transformará Chaclacayo con seguridad, orden y oportunidades.",
-    url: "https://karenacevedo.com",
+    url: "https://karenacevedo.vercel.app",
     siteName: "Campaña Karen Acevedo 2027",
     images: [
       {
-        url: "/karen-oficial.webp",
-        width: 800,
-        height: 600,
+        url: "/karen-hero.jpg",
+        width: 1200,
+        height: 630,
         alt: "Karen Acevedo - Fuerza Ciudadana Chaclacayo",
       },
     ],
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Karen Acevedo 2027 | Alcaldesa de Chaclacayo",
     description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030. Seguridad, orden y desarrollo continuo.",
-    images: ["/karen-oficial.webp"],
+    images: ["/karen-hero.jpg"],
   },
 };
 
