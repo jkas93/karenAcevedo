@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     siteName: "Campaña Karen Acevedo 2027",
     images: [
       {
-        url: "/karen-hero.jpg",
+        url: "/social-preview.jpg",
         width: 1200,
         height: 630,
         alt: "Karen Acevedo - Fuerza Ciudadana Chaclacayo",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Karen Acevedo 2027 | Alcaldesa de Chaclacayo",
     description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030. Seguridad, orden y desarrollo continuo.",
-    images: ["/karen-hero.jpg"],
+    images: ["/social-preview.jpg"],
   },
 };
 
