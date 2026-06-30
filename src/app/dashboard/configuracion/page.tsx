@@ -135,7 +135,7 @@ export default function ConfiguracionPage() {
 
       <div className="grid grid-cols-1 gap-8">
         {/* Módulo: Exportación Masiva */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
           <h2 className="text-xl font-bold text-dark mb-2">Exportación de Datos (Excel)</h2>
           <p className="text-text mb-6 text-sm">Descarga la base de datos completa de voluntarios inscritos en formato CSV, ideal para importar en Excel, sistemas de Call Center o plataformas de SMS/WhatsApp masivo.</p>
           
@@ -150,7 +150,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* Módulo: Variables Dinámicas */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
           <h2 className="text-xl font-bold text-dark mb-2">Datos de Contacto Público</h2>
           <p className="text-text mb-6 text-sm">Estos son los números y correos hacia los que apuntan los botones de la página web (Footer, sección Únete). Al guardarlos aquí, la web pública cambiará automáticamente.</p>
 

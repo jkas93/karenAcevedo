@@ -129,7 +129,7 @@ export default function UsuariosPage() {
         
         {/* Formulario de Alta */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sticky top-10">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 sticky top-10">
             <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
               <div className="bg-blue-50 p-2 rounded-xl text-blue-600">
                 <UserPlus size={24} />
@@ -212,7 +212,7 @@ export default function UsuariosPage() {
 
         {/* Tabla de Usuarios */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 overflow-hidden">
             <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
               <div className="bg-purple-50 p-2 rounded-xl text-purple-600">
                 <Shield size={24} />
