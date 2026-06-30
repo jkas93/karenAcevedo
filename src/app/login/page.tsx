@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -23,8 +24,16 @@ export default function LoginPage() {
     try {
       // Firebase auth requiere un email, usamos el DNI + un dominio falso interno
       const fakeEmail = `${dni}@fuerzaciudadana.pe`;
-      await signInWithEmailAndPassword(auth, fakeEmail, password);
-      router.push("/dashboard");
+      const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, password);
+      
+      // Obtener el rol del usuario
+      const userDoc = await getDoc(doc(db, "usuarios", fakeEmail));
+      
+      if (userDoc.exists() && userDoc.data().rol === 'personero') {
+        router.push("/personero");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       console.error(err);
       setError("Credenciales incorrectas o problemas de conexión.");

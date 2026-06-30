@@ -5,7 +5,7 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Users, Settings, Loader2, Menu, X } from "lucide-react";
+import { LogOut, Users, Settings, Loader2, Menu, X, Map } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -121,14 +121,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
             
             {(userRole === 'administrador' || userRole === 'candidata') && (
-              <Link 
-                href="/dashboard/configuracion" 
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/configuracion') ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
-              >
-                <Settings size={20} className={pathname.includes('/dashboard/configuracion') ? 'text-primary' : 'text-gray-400'} />
-                Configuración
-              </Link>
+              <>
+                <Link 
+                  href="/dashboard/control-electoral" 
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/control-electoral') ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
+                >
+                  <Map size={20} className={pathname.includes('/dashboard/control-electoral') ? 'text-primary' : 'text-gray-400'} />
+                  Control Electoral
+                </Link>
+                <Link 
+                  href="/dashboard/personeros" 
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname.includes('/dashboard/personeros') ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
+                >
+                  <Users size={20} className={pathname.includes('/dashboard/personeros') ? 'text-primary' : 'text-gray-400'} />
+                  Personeros
+                </Link>
+                <Link 
+                  href="/dashboard/configuracion" 
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 font-medium transition-colors ${pathname === '/dashboard/configuracion' ? 'bg-blue-50 text-primary-dark font-bold border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl'}`}
+                >
+                  <Settings size={20} className={pathname === '/dashboard/configuracion' ? 'text-primary' : 'text-gray-400'} />
+                  Configuración
+                </Link>
+              </>
             )}
 
             {userRole === 'administrador' && (
