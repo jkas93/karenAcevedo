@@ -1,9 +1,11 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
+    initializeApp({
+      credential: cert({
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         // Manejar los saltos de línea correctamente en entornos Vercel/Locales
@@ -15,7 +17,8 @@ if (!admin.apps.length) {
   }
 }
 
-const adminAuth = admin.auth();
-const adminDb = admin.firestore();
+const app = getApp();
+const adminAuth = getAuth(app);
+const adminDb = getFirestore(app);
 
 export { adminAuth, adminDb };
