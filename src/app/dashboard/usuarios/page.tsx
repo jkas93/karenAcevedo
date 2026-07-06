@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
-import { Loader2, UserPlus, Shield, Key } from "lucide-react";
+import { Loader2, UserPlus, Shield, Key, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { userService } from "@/lib/firebase/user-service";
 import type { RolUsuario } from "@/lib/firebase/types";
@@ -19,6 +19,10 @@ export default function UsuariosPage() {
   const [passwordUser, setPasswordUser] = useState<any>(null);
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Modal de eliminación
+  const [deletingUser, setDeletingUser] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const router = useRouter();
 
@@ -139,6 +143,33 @@ export default function UsuariosPage() {
       alert(error.message);
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleDeleteUserConfirm = async () => {
+    if (!deletingUser || !auth.currentUser) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/auth/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: deletingUser.uid,
+          adminEmail: auth.currentUser.email,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      setMessage({ text: `✅ Usuario ${deletingUser.nombre} eliminado permanentemente.`, type: "success" });
+      setDeletingUser(null);
+      await fetchUsuarios();
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -312,13 +343,22 @@ export default function UsuariosPage() {
                       <td className="py-4 px-4 text-gray-600 font-mono text-sm">{usr.dni}</td>
                       <td className="py-4 px-4">{getRoleSelect(usr)}</td>
                       <td className="py-4 px-4 text-right">
-                        <button
-                          onClick={() => { setPasswordUser(usr); setNewPassword(""); }}
-                          className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
-                          title="Cambiar Contraseña"
-                        >
-                          <Key size={18} />
-                        </button>
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => { setPasswordUser(usr); setNewPassword(""); }}
+                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
+                            title="Cambiar Contraseña"
+                          >
+                            <Key size={18} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingUser(usr)}
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                            title="Eliminar Usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -376,6 +416,39 @@ export default function UsuariosPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Eliminar Usuario */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 text-center">
+            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={32} />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">Eliminar Usuario</h3>
+            <p className="text-slate-500 text-sm mb-6">
+              ¿Estás seguro de que deseas eliminar permanentemente el acceso de <strong>{deletingUser.nombre}</strong>? Esta acción no se puede deshacer.
+            </p>
+            
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setDeletingUser(null)}
+                className="flex-1 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteUserConfirm}
+                disabled={isDeleting}
+                className="flex-1 flex justify-center items-center gap-2 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? <Loader2 size={18} className="animate-spin" /> : "Sí, eliminar"}
+              </button>
+            </div>
           </div>
         </div>
       )}
