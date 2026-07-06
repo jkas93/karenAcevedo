@@ -4,10 +4,10 @@ export async function POST(req: Request) {
   try {
     const { getAdminServices } = await import('@/lib/firebase-admin');
     const { adminAuth, adminDb } = getAdminServices();
-    const { uid, newPassword, adminEmail } = await req.json();
+    const { uid, userEmail, newPassword, adminEmail } = await req.json();
 
-    if (!uid || !newPassword || !adminEmail) {
-      return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 });
+    if ((!uid && !userEmail) || !newPassword || !adminEmail) {
+      return NextResponse.json({ error: 'Faltan parámetros (uid o userEmail, newPassword, adminEmail)' }, { status: 400 });
     }
 
     if (newPassword.length < 6) {
@@ -21,8 +21,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No autorizado. Se requiere rol de Administrador.' }, { status: 403 });
     }
 
+    // Obtener UID si no viene en el body
+    let targetUid = uid;
+    if (!targetUid && userEmail) {
+      const userRecord = await adminAuth.getUserByEmail(userEmail);
+      targetUid = userRecord.uid;
+    }
+
     // Cambiar la contraseña usando Admin SDK
-    await adminAuth.updateUser(uid, {
+    await adminAuth.updateUser(targetUid, {
       password: newPassword,
     });
 

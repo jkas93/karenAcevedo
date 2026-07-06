@@ -128,6 +128,7 @@ export default function UsuariosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uid: passwordUser.uid,
+          userEmail: passwordUser.id, // Fallback si no hay uid
           newPassword: newPassword,
           adminEmail: auth.currentUser.email, // Validar rol en servidor
         }),
@@ -156,6 +157,7 @@ export default function UsuariosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uid: deletingUser.uid,
+          userEmail: deletingUser.id, // Fallback si no hay uid
           adminEmail: auth.currentUser.email,
         }),
       });
