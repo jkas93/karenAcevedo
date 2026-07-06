@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper: obtener rol del usuario autenticado ───────────────────────
+    function getUserRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.token.email)).data.rol;
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'administrador';
+    }
+
+    function isAdminOrCandidata() {
+      return isAuthenticated() && getUserRole() in ['administrador', 'candidata'];
+    }
+
+    function isTeamVoluntarios() {
+      return isAuthenticated() && getUserRole() in ['administrador', 'candidata', 'usuario'];
+    }
+
+    // ─── Voluntarios ──────────────────────────────────────────────────────
+    // Creación pública (para que funcione el formulario web /unete)
+    // Lectura y modificación solo para el equipo autorizado
+    match /voluntarios/{docId} {
+      allow read: if isTeamVoluntarios();
+      allow create: if true;
+      allow update, delete: if isTeamVoluntarios();
+    }
+
+    // ─── Usuarios ─────────────────────────────────────────────────────────
+    // Cualquier autenticado puede leer su propio perfil
+    // Solo admin puede crear/modificar
+    match /usuarios/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false; // No se borra desde cliente
+    }
+
+    // ─── Locales de votación ──────────────────────────────────────────────
+    // Solo lectura para todos los autenticados
+    // Solo admin puede cargar/modificar
+    match /locales/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ─── Mesas ────────────────────────────────────────────────────────────
+    // Lectura para todos los autenticados (personeros necesitan ver su mesa)
+    // Escritura para todos los autenticados (admin asigna, personero actualiza estado via acta)
+    match /mesas/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // ─── Actas ────────────────────────────────────────────────────────────
+    // Lectura para admin y candidata
+    // Creación para personeros (cualquier autenticado puede crear)
+    // No se modifica ni elimina (inmutabilidad electoral)
+    match /actas/{docId} {
+      allow read: if isAdminOrCandidata();
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ─── Configuración ────────────────────────────────────────────────────
+    // Lectura pública (la web pública usa estos datos para botones de contacto)
+    // Escritura solo para admin y candidata
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdminOrCandidata();
+    }
+
+    // ─── Agenda Pública ───────────────────────────────────────────────────
+    // Lectura pública (para que se vea en /movimiento)
+    // Escritura solo para admin y candidata
+    match /agenda/{docId} {
+      allow read: if true;
+      allow write: if isAdminOrCandidata();
+    }
+  }
+}

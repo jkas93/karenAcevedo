@@ -1,6 +1,26 @@
-import { Calendar, MapPin, Share2, MessageCircle, Camera, Music } from "lucide-react";
+'use client';
+
+import { useState, useEffect } from "react";
+import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2 } from "lucide-react";
+import { agendaService } from "@/lib/firebase/agenda-service";
+import type { ActividadAgenda } from "@/lib/firebase/types";
 
 export default function MovimientoPage() {
+  const [actividades, setActividades] = useState<ActividadAgenda[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Suscripción en tiempo real a la agenda para la web pública
+    const unsubscribe = agendaService.subscribe(
+      (data) => {
+        setActividades(data);
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="bg-white min-h-screen">
       <section className="bg-gradient-to-r from-slate-100 to-slate-200 py-16">
@@ -24,55 +44,34 @@ export default function MovimientoPage() {
               </div>
               
               <div className="space-y-6">
-                
-                {/* Event 1 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 flex gap-6 hover:shadow-lg transition-shadow">
-                  <div className="bg-dark text-white rounded-xl w-20 h-20 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-sm font-semibold uppercase text-secondary">Próx.</span>
-                    <span className="text-lg font-bold">2027</span>
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-gray-400 bg-white border border-slate-200 rounded-2xl">
+                    <Loader2 size={32} className="animate-spin mb-4 text-primary" />
+                    <p>Cargando agenda de actividades...</p>
                   </div>
-                  <div>
-                    <h3 className="text-xl text-dark mb-2">Caminata por la Seguridad</h3>
-                    <p className="text-text text-sm mb-3">Recorreremos las calles para identificar los puntos ciegos sin cámaras de vigilancia y mapear zonas de riesgo.</p>
-                    <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm">
-                      <MapPin size={16} />
-                      <span>Parque Central — Fecha por confirmar</span>
+                ) : actividades.length === 0 ? (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
+                    <p className="text-dark font-bold text-lg mb-2">No hay actividades programadas</p>
+                    <p className="text-text">Mantente atento a nuestras redes para próximos eventos.</p>
+                  </div>
+                ) : (
+                  actividades.map((act) => (
+                    <div key={act.id} className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row gap-6 hover:shadow-lg transition-shadow">
+                      <div className="bg-dark text-white rounded-xl w-20 h-20 flex flex-col items-center justify-center shrink-0">
+                        <span className="text-sm font-semibold uppercase text-secondary">{act.etiqueta}</span>
+                        <span className="text-lg font-bold">{act.fechaDestacada}</span>
+                      </div>
+                      <div>
+                        <h3 className="text-xl text-dark mb-2 font-bold">{act.titulo}</h3>
+                        <p className="text-text text-sm mb-3">{act.descripcion}</p>
+                        <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm">
+                          <MapPin size={16} className="shrink-0" />
+                          <span>{act.ubicacion}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Event 2 */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 flex gap-6 hover:shadow-lg transition-shadow">
-                  <div className="bg-dark text-white rounded-xl w-20 h-20 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-sm font-semibold uppercase text-secondary">Próx.</span>
-                    <span className="text-lg font-bold">2027</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl text-dark mb-2">Diálogo con Emprendedores</h3>
-                    <p className="text-text text-sm mb-3">Reunión con los comerciantes para explicar el plan de licencias en 24 horas y la ventanilla empresarial exprés.</p>
-                    <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm">
-                      <MapPin size={16} />
-                      <span>Mercado Principal — Fecha por confirmar</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Event 3 - NUEVO */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 flex gap-6 hover:shadow-lg transition-shadow">
-                  <div className="bg-dark text-white rounded-xl w-20 h-20 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-sm font-semibold uppercase text-secondary">Próx.</span>
-                    <span className="text-lg font-bold">2027</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl text-dark mb-2">Simulacro de Prevención</h3>
-                    <p className="text-text text-sm mb-3">Ejercicio comunitario con vecinos de las zonas altas para validar las rutas de evacuación de las 6 quebradas.</p>
-                    <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm">
-                      <MapPin size={16} />
-                      <span>Quebrada Huascarán — Fecha por confirmar</span>
-                    </div>
-                  </div>
-                </div>
-
+                  ))
+                )}
               </div>
             </div>
 
