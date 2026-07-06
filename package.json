@@ -13,7 +13,7 @@
     "@types/leaflet": "^1.9.21",
     "clsx": "^2.1.1",
     "firebase": "^12.15.0",
-    "firebase-admin": "^14.1.0",
+    "firebase-admin": "^11.11.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.22.0",
     "next": "16.2.9",
