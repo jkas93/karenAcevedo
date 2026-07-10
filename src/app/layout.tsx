@@ -1,23 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Open_Sans } from "next/font/google";
+
 import "./globals.css";
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-montserrat",
-});
-
-const openSans = Open_Sans({
-  subsets: ["latin"],
-  variable: "--font-open-sans",
-});
+const montserratVariable = "--font-montserrat";
+const openSansVariable = "--font-open-sans";
 
 export const viewport: Viewport = {
   themeColor: "#0070C0",
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://karenacevedo.vercel.app"),
+  metadataBase: new URL("https://karenacevedo.com"),
   title: "Karen Acevedo 2027 | Fuerza Ciudadana Chaclacayo",
   description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030 de la candidata Karen Acevedo. Seguridad, orden y desarrollo continuo para todos los vecinos.",
   keywords: ["Karen Acevedo", "Chaclacayo", "Elecciones 2027", "Alcaldesa Chaclacayo", "Fuerza Ciudadana", "Candidata Chaclacayo", "Seguridad Chaclacayo", "Municipalidad de Chaclacayo"],
@@ -25,11 +18,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Karen Acevedo 2027 | Alcaldesa Chaclacayo",
     description: "Gobierno con Seguridad, Orden y Desarrollo continuo para todos los vecinos.",
-    url: "https://karenacevedo.vercel.app",
+    url: "https://karenacevedo.com",
     siteName: "Campaña Karen Acevedo 2027",
     images: [
       {
-        url: "/social-preview.jpg",
+        url: "/redes.png",
         width: 1200,
         height: 630,
         alt: "Karen Acevedo - Fuerza Ciudadana Chaclacayo",
@@ -42,9 +35,11 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Karen Acevedo 2027 | Alcaldesa de Chaclacayo",
     description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030. Seguridad, orden y desarrollo continuo.",
-    images: ["/social-preview.jpg"],
+    images: ["/redes.png"],
   },
 };
+
+import UneteModal from "@/components/UneteModal";
 
 export default function RootLayout({
   children,
@@ -54,9 +49,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${montserrat.variable} ${openSans.variable} antialiased min-h-screen flex flex-col`}
+        className={`${montserratVariable} ${openSansVariable} antialiased min-h-screen flex flex-col`}
       >
         <main className="flex-grow">{children}</main>
+        <UneteModal />
       </body>
     </html>
   );

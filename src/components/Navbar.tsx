@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,7 +29,7 @@ export default function Navbar() {
   return (
     <header
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? 'glass shadow-md py-3' : 'bg-white/80 py-4'
+        scrolled ? 'bg-white shadow-md' : 'bg-white'
       }`}
     >
       <style>{`
@@ -55,22 +56,9 @@ export default function Navbar() {
           animation: textReveal 2.5s ease-out forwards;
         }
       `}</style>
-      <div className="container mx-auto px-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-2 group relative w-auto max-w-[240px]">
-          {/* Brazo Flexionando (Imagen Original) */}
-          <div className="z-20 flex items-center justify-center animate-arm bg-white rounded-full w-12 h-12 p-1 overflow-hidden shrink-0">
-            <img 
-              src="/brazo.png" 
-              alt="Fuerza Ciudadana"
-              className="w-full h-full drop-shadow-sm group-hover:scale-110 transition-transform object-contain"
-            />
-          </div>
-          
-          {/* Texto que sale del brazo */}
-          <div className="flex flex-col font-heading font-black tracking-tighter uppercase whitespace-nowrap animate-text-reveal">
-            <span className="text-[20px] md:text-[24px] text-dark leading-none">Karen</span>
-            <span className="text-[16px] md:text-[20px] text-primary leading-none -mt-1">Acevedo</span>
-          </div>
+      <div className="container mx-auto px-4 md:px-12 lg:px-16 xl:px-24 flex justify-between items-center">
+        <Link href="/" className="flex items-center group relative w-auto hover:opacity-90 transition-opacity">
+          <Logo className="scale-[0.75] sm:scale-[0.85] md:scale-100 origin-left" />
         </Link>
 
         {/* Desktop Nav */}
@@ -92,7 +80,7 @@ export default function Navbar() {
             ))}
           </ul>
           <Link
-            href="/unete"
+            href="#unete"
             className="bg-secondary text-dark font-heading font-bold py-2 px-6 rounded-full shadow hover:bg-yellow-400 hover:-translate-y-1 transition-all"
           >
             Súmate
@@ -132,7 +120,7 @@ export default function Navbar() {
           ))}
           <li className="w-full px-6 mt-2">
             <Link
-              href="/unete"
+              href="#unete"
               onClick={() => setIsOpen(false)}
               className="block w-full text-center bg-secondary text-dark font-heading font-bold py-3 rounded-full"
             >

@@ -107,30 +107,30 @@ export default function KarenPage() {
             
             <div className="mb-12 relative pl-8">
               <div className="absolute left-[-11px] top-1 w-5 h-5 bg-secondary rounded-full border-4 border-dark z-10"></div>
-              <span className="text-primary-dark font-bold text-lg">Conocimiento Territorial</span>
-              <h4 className="text-dark text-lg mb-2 mt-1">Trabajo de Campo con las 6 Quebradas</h4>
-              <p className="text-text">Años de experiencia trabajando directamente con juntas vecinales en las zonas de mayor vulnerabilidad del distrito: Huascarán, Los Cóndores, Cusipata, La Floresta, Alfonso Cobián y Santa Inés.</p>
+              <span className="text-primary-dark font-bold text-lg">Preparación Académica</span>
+              <h4 className="text-dark text-lg mb-2 mt-1">Educación y Visión Gerencial</h4>
+              <p className="text-text">Licenciada en Educación (UNE Enrique Guzmán y Valle) y Magíster en Docencia Universitaria. Complementa su perfil analítico con estudios de Administración en la UPC y Administración de Redes, combinando liderazgo humano con capacidad técnica.</p>
             </div>
 
             <div className="mb-12 relative pl-8">
               <div className="absolute left-[-11px] top-1 w-5 h-5 bg-secondary rounded-full border-4 border-dark z-10"></div>
-              <span className="text-primary-dark font-bold text-lg">Capacidad Técnica</span>
-              <h4 className="text-dark text-lg mb-2 mt-1">Plan Maestro Basado en Evidencia</h4>
-              <p className="text-text">Desarrollo de la primera Matriz de Desarrollo Distrital 4×4, un plan de gobierno con 16 intersecciones estratégicas, diagnóstico con línea de base, arquitectura VSM (Modelo de Sistema Viable) y viabilidad financiera documentada.</p>
+              <span className="text-primary-dark font-bold text-lg">Sector Público</span>
+              <h4 className="text-dark text-lg mb-2 mt-1">Gestión Administrativa Estatal</h4>
+              <p className="text-text">Sólida trayectoria administrativa en entidades públicas de gran envergadura. Cuenta con experiencia comprobada laborando en el Ministerio de Educación (MINEDU), la UGEL N° 06 y la histórica UNE La Cantuta.</p>
             </div>
 
             <div className="mb-12 relative pl-8">
               <div className="absolute left-[-11px] top-1 w-5 h-5 bg-secondary rounded-full border-4 border-dark z-10"></div>
-              <span className="text-primary-dark font-bold text-lg">Innovación Tecnológica</span>
-              <h4 className="text-dark text-lg mb-2 mt-1">Ecosistema de Seguridad Digital</h4>
-              <p className="text-text">Su equipo técnico ya diseñó y documentó el ecosistema Web-C3 (Centro de Comando), App VecinoChaclacayoSeguro y App PatrullajeChaclacayo con arquitectura en la nube (Cloud Firestore). No son promesas: es tecnología lista.</p>
+              <span className="text-primary-dark font-bold text-lg">Gestión Local</span>
+              <h4 className="text-dark text-lg mb-2 mt-1">Trabajo en Gobiernos Locales</h4>
+              <p className="text-text">Conocimiento real y desde adentro de la gestión pública territorial gracias a su experiencia laboral en municipalidades distritales. Entiende cómo funciona el aparato municipal para agilizar procesos y servir mejor al vecino.</p>
             </div>
 
             <div className="relative pl-8">
               <div className="absolute left-[-11px] top-1 w-5 h-5 bg-secondary rounded-full border-4 border-dark z-10"></div>
-              <span className="text-primary-dark font-bold text-lg">Candidatura 2027</span>
-              <h4 className="text-dark text-lg mb-2 mt-1">Fuerza Ciudadana</h4>
-              <p className="text-text">Karen Acevedo lidera la candidatura para transformar Chaclacayo con una gestión organizada, medible y orientada al vecino, donde cada decisión municipal tenga impacto real en la vida cotidiana.</p>
+              <span className="text-primary-dark font-bold text-lg">Compromiso Social</span>
+              <h4 className="text-dark text-lg mb-2 mt-1">Vocación Docente Integral</h4>
+              <p className="text-text">Años de servicio directo a la comunidad como docente en colegios estatales, instituciones particulares y de nivel superior. Una trayectoria que le otorga un contacto directo y permanente con las necesidades de las familias y la juventud.</p>
             </div>
             
           </div>
