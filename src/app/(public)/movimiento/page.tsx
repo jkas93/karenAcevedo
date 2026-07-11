@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download } from "lucide-react";
 import { agendaService } from "@/lib/firebase/agenda-service";
 import type { ActividadAgenda } from "@/lib/firebase/types";
 
@@ -99,15 +99,31 @@ export default function MovimientoPage() {
                   <span className="text-xs text-text mt-2">Plantillas listas</span>
                 </button>
 
-                <a 
-                  href="/jingle-karen-acevedo-2027.mp3" 
-                  download="jingle-karen-acevedo-2027.mp3"
-                  className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group sm:col-span-2"
-                >
-                  <Music size={40} className="text-primary-dark mb-4 group-hover:scale-110 transition-transform" />
-                  <span className="font-bold text-dark">Jingle Oficial (MP3)</span>
-                  <span className="text-xs text-text mt-2">&quot;Fuerza Chaclacayo&quot;</span>
-                </a>
+                <div className="sm:col-span-2 flex flex-col gap-4">
+                  <a 
+                    href="/jingle-karen-acevedo-2027.mp3" 
+                    download="jingle-karen-acevedo-2027.mp3"
+                    className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group relative"
+                  >
+                    <Music size={40} className="text-primary-dark mb-4 group-hover:scale-110 transition-transform" />
+                    <span className="font-bold text-dark flex items-center gap-2">
+                      Jingle Oficial (MP3) <Download size={16} className="text-primary"/>
+                    </span>
+                    <span className="text-xs text-text mt-2">&quot;Fuerza Chaclacayo&quot; - Clic para descargar</span>
+                  </a>
+                  
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-2">
+                    <span className="text-sm font-bold text-dark">Escuchar ahora:</span>
+                    <audio 
+                      controls 
+                      autoPlay
+                      src="/jingle-karen-acevedo-2027.mp3" 
+                      className="w-full max-w-sm"
+                    >
+                      Tu navegador no soporta el elemento de audio.
+                    </audio>
+                  </div>
+                </div>
 
               </div>
             </div>
