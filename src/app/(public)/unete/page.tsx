@@ -8,7 +8,7 @@ import UneteForm from "@/components/UneteForm";
 
 export default function UnetePage() {
   const [whatsapp, setWhatsapp] = useState("51961858568");
-  const [correo, setCorreo] = useState("voluntarios@fuerzaciudadana.pe");
+  const [correo, setCorreo] = useState("karen.alcaldesa2026@gmail.com");
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "config", "contacto"), (doc) => {
@@ -36,7 +36,7 @@ export default function UnetePage() {
             </p>
             
             <a 
-              href={`https://wa.me/${whatsapp}?text=Hola,%20quiero%20ser%20voluntario%20de%20la%20campa%C3%B1a%20de%20Karen%20Acevedo`} 
+              href="#" 
               target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-3 w-full sm:w-auto bg-[#25D366] text-white font-bold py-4 px-8 rounded-full hover:bg-[#1ebe57] transition-all hover:-translate-y-1 hover:shadow-lg"
             >

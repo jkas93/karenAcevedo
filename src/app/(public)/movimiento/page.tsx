@@ -99,11 +99,15 @@ export default function MovimientoPage() {
                   <span className="text-xs text-text mt-2">Plantillas listas</span>
                 </button>
 
-                <button className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group sm:col-span-2">
+                <a 
+                  href="/jingle-karen-acevedo-2027.mp3" 
+                  download="jingle-karen-acevedo-2027.mp3"
+                  className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group sm:col-span-2"
+                >
                   <Music size={40} className="text-primary-dark mb-4 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-dark">Jingle Oficial (MP3)</span>
                   <span className="text-xs text-text mt-2">&quot;Fuerza Chaclacayo&quot;</span>
-                </button>
+                </a>
 
               </div>
             </div>

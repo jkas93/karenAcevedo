@@ -46,12 +46,12 @@ function useCountUp(target: number, prefix: string, suffix: string, duration = 2
 }
 
 const cifras = [
-  { emoji: "⚠️", value: 3248, prefix: "", suffix: "", label: "VECINOS EXPUESTOS\nA HUAICOS", bgColor: "bg-red-500/10" },
-  { emoji: "📷", value: 8, prefix: "", suffix: "%", label: "DE CÁMARAS\nOPERATIVAS", bgColor: "bg-orange-500/10" },
-  { emoji: "⏱️", value: 5, prefix: "", suffix: " MIN", label: "ESPERA DE\nSERENAZGO", bgColor: "bg-yellow-400/10" },
-  { emoji: "💼", value: 13, prefix: "", suffix: "%", label: "INFORMALIDAD\nCOMERCIAL", bgColor: "bg-purple-500/10" },
-  { emoji: "🩸", value: 4, prefix: "", suffix: "%", label: "DE ANEMIA\nINFANTIL", bgColor: "bg-red-500/10" },
-  { emoji: "📉", value: 56, prefix: "S/", suffix: "K", label: "DÉFICIT EN\nINFRAESTRUCTURA", bgColor: "bg-emerald-500/10" },
+  { emoji: "⚠️", value: 14500, prefix: "", suffix: "", label: "VECINOS EXPUESTOS\nA HUAICOS", bgColor: "bg-red-500/10" },
+  { emoji: "📷", value: 40, prefix: "", suffix: "%", label: "DE CÁMARAS\nINOPERATIVAS", bgColor: "bg-orange-500/10" },
+  { emoji: "⏱️", value: 25, prefix: "", suffix: " MIN", label: "ESPERA DE\nSERENAZGO", bgColor: "bg-yellow-400/10" },
+  { emoji: "💼", value: 62, prefix: "", suffix: "%", label: "INFORMALIDAD\nCOMERCIAL", bgColor: "bg-purple-500/10" },
+  { emoji: "🩸", value: 22, prefix: "", suffix: "%", label: "DE ANEMIA\nINFANTIL", bgColor: "bg-red-500/10" },
+  { emoji: "📉", value: 250, prefix: "S/", suffix: "K", label: "PÉRDIDA/DÍA SI\nCIERRAN VÍAS", bgColor: "bg-emerald-500/10" },
 ];
 
 function CifraCard({ emoji, value, prefix, suffix, label, bgColor }: typeof cifras[0]) {

@@ -66,11 +66,18 @@ export default function UneteForm() {
             href="#" 
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-3 bg-[#1cd464] text-white font-heading font-bold text-lg py-4 px-8 rounded-full hover:bg-[#18b856] transition-colors w-full sm:w-auto"
+            className="flex items-center justify-center gap-3 bg-[#1cd464] text-white font-heading font-bold text-lg py-4 px-8 rounded-full hover:bg-[#18b856] transition-colors w-full sm:w-auto mb-8"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" /><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" /></svg>
             Únete al WhatsApp Oficial
           </a>
+
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h4 className="font-heading font-black text-dark text-lg mb-1">¿Dudas?</h4>
+            <p className="text-[#4b5563] text-sm">
+              Escríbenos directamente a <a href="mailto:karen.alcaldesa2026@gmail.com" className="text-[#0070c0] hover:underline">karen.alcaldesa2026@gmail.com</a>
+            </p>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">

@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 
 export default function Footer() {
   const [whatsapp, setWhatsapp] = useState("51961858568");
-  const [correo, setCorreo] = useState("voluntarios@fuerzaciudadana.pe");
+  const [correo, setCorreo] = useState("karen.alcaldesa2026@gmail.com");
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "config", "contacto"), (doc) => {
@@ -51,7 +51,7 @@ export default function Footer() {
             <h4 className="font-heading font-bold text-2xl mb-6 text-[#ffcc00]">Participa</h4>
             <ul className="flex flex-col gap-4">
               <li><Link href="/unete" className="text-white font-medium hover:text-[#ffcc00] transition-colors">Únete al equipo</Link></li>
-              <li><a href={`https://wa.me/${whatsapp}?text=Hola,%20quiero%20ser%20voluntario%20de%20la%20campa%C3%B1a%20de%20Karen%20Acevedo`} target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-[#ffcc00] transition-colors">WhatsApp Oficial</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-[#ffcc00] transition-colors">WhatsApp Oficial</a></li>
               <li><a href={`mailto:${correo}`} className="text-white font-medium hover:text-[#ffcc00] transition-colors">Correo de contacto</a></li>
             </ul>
           </div>

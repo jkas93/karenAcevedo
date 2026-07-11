@@ -116,7 +116,7 @@ export default function KarenPage() {
               <div className="absolute left-[-11px] top-1 w-5 h-5 bg-secondary rounded-full border-4 border-dark z-10"></div>
               <span className="text-primary-dark font-bold text-lg">Sector Público</span>
               <h4 className="text-dark text-lg mb-2 mt-1">Gestión Administrativa Estatal</h4>
-              <p className="text-text">Sólida trayectoria administrativa en entidades públicas de gran envergadura. Cuenta con experiencia comprobada laborando en el Ministerio de Educación (MINEDU), la UGEL N° 06 y la histórica UNE La Cantuta.</p>
+              <p className="text-text">Sólida trayectoria administrativa en entidades públicas de gran envergadura. Cuenta con experiencia comprobada laborando en el Ministerio de Educación (MINEDU), la UGEL N° 06 y la histórica UNE La Cantuta, entre otros</p>
             </div>
 
             <div className="mb-12 relative pl-8">

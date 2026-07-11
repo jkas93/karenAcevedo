@@ -80,7 +80,7 @@ export default function Navbar() {
             ))}
           </ul>
           <Link
-            href="#unete"
+            href="/unete"
             className="bg-secondary text-dark font-heading font-bold py-2 px-6 rounded-full shadow hover:bg-yellow-400 hover:-translate-y-1 transition-all"
           >
             Súmate
@@ -120,7 +120,7 @@ export default function Navbar() {
           ))}
           <li className="w-full px-6 mt-2">
             <Link
-              href="#unete"
+              href="/unete"
               onClick={() => setIsOpen(false)}
               className="block w-full text-center bg-secondary text-dark font-heading font-bold py-3 rounded-full"
             >

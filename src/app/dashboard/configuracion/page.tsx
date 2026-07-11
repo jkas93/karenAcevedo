@@ -49,7 +49,7 @@ export default function ConfiguracionPage() {
           setCorreo(docSnap.data().correo || "");
         } else {
           setWhatsapp("51961858568");
-          setCorreo("voluntarios@fuerzaciudadana.pe");
+          setCorreo("karen.alcaldesa2026@gmail.com");
         }
       } catch (error) {
         console.error("Error cargando configuración:", error);
@@ -351,7 +351,7 @@ export default function ConfiguracionPage() {
                       value={correo}
                       onChange={(e) => setCorreo(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
-                      placeholder="voluntarios@fuerzaciudadana.pe"
+                      placeholder="karen.alcaldesa2026@gmail.com"
                     />
                   </div>
                 </div>
