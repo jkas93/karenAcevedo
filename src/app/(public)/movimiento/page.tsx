@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download } from "lucide-react";
 import { agendaService } from "@/lib/firebase/agenda-service";
 import type { ActividadAgenda } from "@/lib/firebase/types";
@@ -8,6 +8,14 @@ import type { ActividadAgenda } from "@/lib/firebase/types";
 export default function MovimientoPage() {
   const [actividades, setActividades] = useState<ActividadAgenda[]>([]);
   const [loading, setLoading] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    // Intentar forzar la reproducción automática al montar el componente
+    if (audioRef.current) {
+      audioRef.current.play().catch(e => console.log("El navegador bloqueó el autoplay:", e));
+    }
+  }, []);
 
   useEffect(() => {
     // Suscripción en tiempo real a la agenda para la web pública
@@ -115,6 +123,7 @@ export default function MovimientoPage() {
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-2">
                     <span className="text-sm font-bold text-dark">Escuchar ahora:</span>
                     <audio 
+                      ref={audioRef}
                       controls 
                       autoPlay
                       src="/jingle-karen-acevedo-2027.mp3" 
