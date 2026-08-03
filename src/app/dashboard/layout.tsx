@@ -14,6 +14,7 @@ import type { RolUsuario } from "@/lib/firebase/types";
 const VALID_ROLES: RolUsuario[] = ['administrador', 'candidata', 'digitador', 'usuario'];
 
 import { PwaControls } from "@/components/pwa/PwaControls";
+import { unregisterCurrentDevicePush } from "@/lib/pwa/unregister-current-device";
 function isRolUsuario(value: unknown): value is RolUsuario {
   return typeof value === 'string' && VALID_ROLES.includes(value as RolUsuario);
 }
@@ -93,6 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [loading, pathAllowed, router, userRole]);
 
   const handleLogout = async () => {
+    await unregisterCurrentDevicePush();
     await signOut(auth);
     router.replace("/login");
   };
@@ -264,6 +266,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="pt-6 border-t border-gray-100 mt-auto">
+            {(!isCollapsed || menuOpen) && <div className="mb-4"><PwaControls /></div>}
             <div className={`flex items-center ${isCollapsed && !menuOpen ? 'justify-center flex-col gap-4' : 'justify-between'}`}>
               {(!isCollapsed || menuOpen) && <span className="text-xs text-gray-500 font-medium truncate max-w-[150px]">DNI: {user.email?.split('@')[0]}</span>}
               <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2" title="Cerrar sesión">
@@ -281,7 +284,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </ElectoralProvider>
       </main>
-            {(!isCollapsed || menuOpen) && <div className="mb-4"><PwaControls /></div>}
     </div>
   );
 }

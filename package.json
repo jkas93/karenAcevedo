@@ -14,7 +14,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "firebase": "^12.17.0",
-    "firebase-admin": "^14.2.0",
+    "firebase-admin": "13.7.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.22.0",
     "next": "^16.2.12",

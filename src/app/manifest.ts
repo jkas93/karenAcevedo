@@ -15,19 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['productivity', 'business'],
     icons: [
       {
-        src: '/pwa-icon/192',
+        src: '/pwa-icon/192?v=brazo-1',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/pwa-icon/512',
+        src: '/pwa-icon/512?v=brazo-1',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/pwa-icon/512',
+        src: '/pwa-icon/512?v=brazo-1',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
@@ -38,7 +38,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Calendario operativo',
         short_name: 'Calendario',
         url: '/dashboard/calendario',
-        icons: [{ src: '/pwa-icon/192', sizes: '192x192', type: 'image/png' }],
+        icons: [{ src: '/pwa-icon/192?v=brazo-1', sizes: '192x192', type: 'image/png' }],
       },
     ],
   };

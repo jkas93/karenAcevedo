@@ -39,12 +39,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: [
-    "firebase-admin",
-    "firebase-admin/app",
-    "firebase-admin/auth",
-    "firebase-admin/firestore",
-  ],
   async headers() {
     return [
       {

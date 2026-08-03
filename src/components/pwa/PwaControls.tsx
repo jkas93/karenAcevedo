@@ -34,6 +34,8 @@ export function PwaControls() {
   const [isIOS, setIsIOS] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [serverRegistered, setServerRegistered] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
   const [busy, setBusy] = useState<'install' | 'push' | null>(null);
   const [message, setMessage] = useState('');
 
@@ -41,9 +43,14 @@ export function PwaControls() {
     const setup = async () => {
       setInstalled(isStandaloneMode());
       setIsIOS(isAppleMobile());
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (
+        !('serviceWorker' in navigator) ||
+        !('PushManager' in window) ||
+        !('Notification' in window)
+      ) return;
 
       setSupported(true);
+      setPermission(Notification.permission);
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
         updateViaCache: 'none',
@@ -51,10 +58,20 @@ export function PwaControls() {
       const currentSubscription = await registration.pushManager.getSubscription();
       setSubscription(currentSubscription);
 
-      if (currentSubscription) {
-        await authenticatedPost('/api/push/subscribe', {
-          subscription: currentSubscription.toJSON(),
-        }).catch(() => undefined);
+      if (currentSubscription && Notification.permission === 'granted') {
+        try {
+          await authenticatedPost('/api/push/subscribe', {
+            subscription: currentSubscription.toJSON(),
+          });
+          setServerRegistered(true);
+        } catch (error) {
+          setServerRegistered(false);
+          setMessage(
+            error instanceof Error
+              ? `El dispositivo conserva el permiso, pero no pudo registrarse: ${error.message}`
+              : 'El dispositivo conserva el permiso, pero no pudo registrarse.',
+          );
+        }
       }
     };
 
@@ -113,15 +130,18 @@ export function PwaControls() {
     }
 
     setBusy('push');
+    let current: PushSubscription | null = subscription;
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
+      const nextPermission = await Notification.requestPermission();
+      setPermission(nextPermission);
+      if (nextPermission !== 'granted') {
+        setServerRegistered(false);
         setMessage('Debes permitir notificaciones desde la configuracion del navegador.');
         return;
       }
 
       const registration = await navigator.serviceWorker.ready;
-      const current =
+      current =
         (await registration.pushManager.getSubscription()) ||
         (await registration.pushManager.subscribe({
           userVisibleOnly: true,
@@ -131,8 +151,11 @@ export function PwaControls() {
         subscription: current.toJSON(),
       });
       setSubscription(current);
+      setServerRegistered(true);
       setMessage('Avisos activados para este dispositivo.');
     } catch (error) {
+      if (current) setSubscription(current);
+      setServerRegistered(false);
       console.error('No se pudieron activar los avisos:', error);
       setMessage(error instanceof Error ? error.message : 'No se pudieron activar los avisos.');
     } finally {
@@ -144,18 +167,33 @@ export function PwaControls() {
     if (!subscription) return;
     setBusy('push');
     try {
-      await authenticatedPost('/api/push/unsubscribe', {
-        endpoint: subscription.endpoint,
-      });
+      let removedFromServer = true;
+      try {
+        await authenticatedPost('/api/push/unsubscribe', {
+          endpoint: subscription.endpoint,
+        });
+      } catch (error) {
+        removedFromServer = false;
+        console.warn('No se pudo retirar el registro remoto de avisos:', error);
+      }
       await subscription.unsubscribe();
       setSubscription(null);
-      setMessage('Avisos desactivados en este dispositivo.');
+      setServerRegistered(false);
+      setMessage(
+        removedFromServer
+          ? 'Avisos desactivados en este dispositivo.'
+          : 'Avisos desactivados en el dispositivo. El registro remoto se limpiara automaticamente.',
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudieron desactivar los avisos.');
     } finally {
       setBusy(null);
     }
   };
+
+  const pushEnabled = Boolean(
+    subscription && serverRegistered && permission === 'granted',
+  );
 
   return (
     <div className="space-y-2">
@@ -174,22 +212,28 @@ export function PwaControls() {
         {supported && (
           <button
             type="button"
-            onClick={subscription ? disablePush : enablePush}
+            onClick={pushEnabled ? disablePush : enablePush}
             disabled={busy !== null}
             className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition disabled:opacity-60 ${
-              subscription
+              pushEnabled
                 ? 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                 : 'border-amber-100 bg-amber-50 text-amber-800 hover:bg-amber-100'
             }`}
           >
             {busy === 'push' ? (
               <Loader2 size={16} className="animate-spin" />
-            ) : subscription ? (
+            ) : pushEnabled ? (
               <Bell size={16} />
             ) : (
               <BellOff size={16} />
             )}
-            <span>{subscription ? 'Avisos activados' : 'Activar avisos'}</span>
+            <span>
+              {pushEnabled
+                ? 'Avisos activados'
+                : subscription
+                  ? 'Reintentar avisos'
+                  : 'Activar avisos'}
+            </span>
           </button>
         )}
       </div>

@@ -47,8 +47,10 @@ export async function POST(request: Request) {
       .digest('hex');
     const { adminDb } = getAdminServices();
 
-    await adminDb.collection('pushSubscriptions').doc(subscriptionId).set(
-      {
+    const subscriptionRef = adminDb.collection('pushSubscriptions').doc(subscriptionId);
+    await adminDb.runTransaction(async (transaction) => {
+      const existing = await transaction.get(subscriptionRef);
+      transaction.set(subscriptionRef, {
         ...subscription,
         uid: session.token.uid,
         userEmail: session.email,
@@ -57,10 +59,9 @@ export async function POST(request: Request) {
         userAgent: (request.headers.get('user-agent') || '').slice(0, 300),
         enabled: true,
         updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+        ...(existing.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      }, { merge: true });
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

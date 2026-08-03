@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   title: "Karen Acevedo 2027 | Fuerza Ciudadana Chaclacayo",
   description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030 de la candidata Karen Acevedo. Seguridad, orden y desarrollo continuo para todos los vecinos.",
   applicationName: "Equipo Karen Acevedo",
+  icons: {
+    icon: [{ url: "/pwa-icon/192?v=brazo-1", type: "image/png", sizes: "192x192" }],
+    apple: [{ url: "/pwa-icon/192?v=brazo-1", type: "image/png", sizes: "192x192" }],
+  },
   keywords: ["Karen Acevedo", "Chaclacayo", "Elecciones 2027", "Alcaldesa Chaclacayo", "Fuerza Ciudadana", "Candidata Chaclacayo", "Seguridad Chaclacayo", "Municipalidad de Chaclacayo"],
   authors: [{ name: "Karen Acevedo" }],
   appleWebApp: {

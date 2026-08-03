@@ -55,6 +55,23 @@ export async function POST(request: Request) {
       }
     }
 
+    const [subscriptionsByUid, subscriptionsByEmail] = await Promise.all([
+      adminDb.collection('pushSubscriptions').where('uid', '==', targetUser.uid).get(),
+      adminDb.collection('pushSubscriptions').where('userEmail', '==', profileEmail).get(),
+    ]);
+    const subscriptionRefs = new Map(
+      [...subscriptionsByUid.docs, ...subscriptionsByEmail.docs].map((document) => [
+        document.ref.path,
+        document.ref,
+      ] as const),
+    );
+    const refs = [...subscriptionRefs.values()];
+    for (let index = 0; index < refs.length; index += 450) {
+      const batch = adminDb.batch();
+      refs.slice(index, index + 450).forEach((reference) => batch.delete(reference));
+      await batch.commit();
+    }
+
     await adminAuth.deleteUser(targetUser.uid);
     await profileRef.delete();
 
