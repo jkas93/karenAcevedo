@@ -27,6 +27,68 @@ function isStandaloneMode() {
 function isAppleMobile() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
+const SERVICE_WORKER_TIMEOUT_MS = 15_000;
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function getActiveServiceWorkerRegistration() {
+  let registration = await navigator.serviceWorker.register('/sw.js', {
+    scope: '/',
+    updateViaCache: 'none',
+  });
+  const deadline = Date.now() + SERVICE_WORKER_TIMEOUT_MS;
+  let requestedSkipWaiting = false;
+
+  while (Date.now() < deadline) {
+    if (registration.active?.state === 'activated') {
+      return registration;
+    }
+    if (registration.waiting && !requestedSkipWaiting) {
+      requestedSkipWaiting = true;
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    await delay(100);
+    registration =
+      (await navigator.serviceWorker.getRegistration('/')) ||
+      registration;
+  }
+
+  throw new Error(
+    'El servicio de notificaciones sigue preparandose. Recarga la pagina e intenta nuevamente.',
+  );
+}
+
+function notificationErrorMessage(error: unknown) {
+  const detail = error instanceof Error ? error.message : '';
+  if (/no active service worker/i.test(detail)) return 'La aplicacion aun esta preparando los avisos. Intenta nuevamente.';
+  return detail || 'No se pudieron activar los avisos.';
+}
+async function getOrCreatePushSubscription() {
+  let registration = await getActiveServiceWorkerRegistration();
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) return existing;
+
+  const options: PushSubscriptionOptionsInit = {
+    userVisibleOnly: true,
+    applicationServerKey: toUint8Array(VAPID_PUBLIC_KEY),
+  };
+
+  try {
+    return await registration.pushManager.subscribe(options);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : '';
+    if (!/no active service worker/i.test(detail)) throw error;
+    await delay(400);
+    registration = await getActiveServiceWorkerRegistration();
+    return (
+      (await registration.pushManager.getSubscription()) ||
+      (await registration.pushManager.subscribe(options))
+    );
+  }
+}
+
 
 export function PwaControls() {
   const [supported, setSupported] = useState(false);
@@ -51,10 +113,7 @@ export function PwaControls() {
 
       setSupported(true);
       setPermission(Notification.permission);
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/',
-        updateViaCache: 'none',
-      });
+      const registration = await getActiveServiceWorkerRegistration();
       const currentSubscription = await registration.pushManager.getSubscription();
       setSubscription(currentSubscription);
 
@@ -87,6 +146,7 @@ export function PwaControls() {
 
     void setup().catch((error) => {
       console.error('No se pudo preparar la PWA:', error);
+      setMessage(notificationErrorMessage(error));
     });
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
     window.addEventListener('appinstalled', handleInstalled);
@@ -140,13 +200,7 @@ export function PwaControls() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
-      current =
-        (await registration.pushManager.getSubscription()) ||
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: toUint8Array(VAPID_PUBLIC_KEY),
-        }));
+      current = await getOrCreatePushSubscription();
       await authenticatedPost('/api/push/subscribe', {
         subscription: current.toJSON(),
       });
@@ -157,7 +211,7 @@ export function PwaControls() {
       if (current) setSubscription(current);
       setServerRegistered(false);
       console.error('No se pudieron activar los avisos:', error);
-      setMessage(error instanceof Error ? error.message : 'No se pudieron activar los avisos.');
+      setMessage(notificationErrorMessage(error));
     } finally {
       setBusy(null);
     }
