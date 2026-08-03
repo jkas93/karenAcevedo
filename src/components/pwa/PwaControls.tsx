@@ -4,11 +4,7 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff, Download, Loader2, Share2, Smartphone, X } from 'lucide-react';
 import { authenticatedPost } from '@/lib/firebase/authenticated-request';
 import { VAPID_PUBLIC_KEY } from '@/lib/pwa/push-config';
-
-type InstallPromptEvent = Event & {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
-};
+import { usePwaInstall } from '@/components/pwa/PwaInstallProvider';
 
 function toUint8Array(base64: string) {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4);
@@ -17,16 +13,6 @@ function toUint8Array(base64: string) {
   return Uint8Array.from(raw, (character) => character.charCodeAt(0));
 }
 
-function isStandaloneMode() {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
-  );
-}
-
-function isAppleMobile() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
 const SERVICE_WORKER_TIMEOUT_MS = 15_000;
 
 function delay(milliseconds: number) {
@@ -91,20 +77,16 @@ async function getOrCreatePushSubscription() {
 
 
 export function PwaControls() {
+  const { installed, isIOS, installing, installApp } = usePwaInstall();
   const [supported, setSupported] = useState(false);
-  const [installed, setInstalled] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [serverRegistered, setServerRegistered] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
-  const [busy, setBusy] = useState<'install' | 'push' | null>(null);
+  const [busy, setBusy] = useState<'push' | null>(null);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     const setup = async () => {
-      setInstalled(isStandaloneMode());
-      setIsIOS(isAppleMobile());
       if (
         !('serviceWorker' in navigator) ||
         !('PushManager' in window) ||
@@ -134,49 +116,11 @@ export function PwaControls() {
       }
     };
 
-    const handleInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as InstallPromptEvent);
-    };
-    const handleInstalled = () => {
-      setInstalled(true);
-      setInstallPrompt(null);
-      setMessage('Aplicacion instalada correctamente.');
-    };
-
     void setup().catch((error) => {
       console.error('No se pudo preparar la PWA:', error);
       setMessage(notificationErrorMessage(error));
     });
-    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-    window.addEventListener('appinstalled', handleInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
-      window.removeEventListener('appinstalled', handleInstalled);
-    };
   }, []);
-
-  const installApp = async () => {
-    if (installed) return;
-    if (!installPrompt) {
-      setMessage(
-        isIOS
-          ? 'En Safari toca Compartir y luego Agregar a pantalla de inicio.'
-          : 'Abre el menu del navegador y elige Instalar aplicacion.',
-      );
-      return;
-    }
-
-    setBusy('install');
-    try {
-      await installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
-      if (choice.outcome === 'accepted') setInstalled(true);
-      setInstallPrompt(null);
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const enablePush = async () => {
     if (isIOS && !installed) {
@@ -255,11 +199,11 @@ export function PwaControls() {
         {!installed && (
           <button
             type="button"
-            onClick={installApp}
-            disabled={busy !== null}
+            onClick={() => void installApp()}
+            disabled={busy !== null || installing}
             className="flex w-full items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-left text-xs font-bold text-primary-dark transition hover:border-blue-200 hover:bg-blue-100 disabled:opacity-60"
           >
-            {busy === 'install' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            {installing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             <span>Instalar aplicaci&oacute;n</span>
           </button>
         )}
@@ -267,7 +211,7 @@ export function PwaControls() {
           <button
             type="button"
             onClick={pushEnabled ? disablePush : enablePush}
-            disabled={busy !== null}
+            disabled={busy !== null || installing}
             className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-xs font-bold transition disabled:opacity-60 ${
               pushEnabled
                 ? 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'

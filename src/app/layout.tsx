@@ -51,6 +51,7 @@ export const metadata: Metadata = {
 };
 
 import UneteModal from "@/components/UneteModal";
+import { PwaInstallProvider } from "@/components/pwa/PwaInstallProvider";
 
 export default function RootLayout({
   children,
@@ -62,8 +63,10 @@ export default function RootLayout({
       <body
         className={`${montserratVariable} ${openSansVariable} antialiased min-h-screen flex flex-col`}
       >
-        <main className="flex-grow">{children}</main>
-        <UneteModal />
+        <PwaInstallProvider>
+          <main className="flex-grow">{children}</main>
+          <UneteModal />
+        </PwaInstallProvider>
       </body>
     </html>
   );

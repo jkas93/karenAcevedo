@@ -14,6 +14,7 @@ import type { RolUsuario } from "@/lib/firebase/types";
 const VALID_ROLES: RolUsuario[] = ['administrador', 'candidata', 'digitador', 'usuario'];
 
 import { PwaControls } from "@/components/pwa/PwaControls";
+import { PwaInstallOnboarding } from "@/components/pwa/PwaInstallProvider";
 import { unregisterCurrentDevicePush } from "@/lib/pwa/unregister-current-device";
 function isRolUsuario(value: unknown): value is RolUsuario {
   return typeof value === 'string' && VALID_ROLES.includes(value as RolUsuario);
@@ -284,6 +285,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </ElectoralProvider>
       </main>
+      <PwaInstallOnboarding />
     </div>
   );
 }
