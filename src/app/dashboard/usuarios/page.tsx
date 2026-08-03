@@ -1,30 +1,40 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { Loader2, UserPlus, Shield, Key, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { userService } from "@/lib/firebase/user-service";
 import type { RolUsuario } from "@/lib/firebase/types";
+import { authenticatedPost } from "@/lib/firebase/authenticated-request";
+
+type UsuarioPanel = {
+  id: string;
+  uid?: string;
+  nombre: string;
+  dni: string;
+  rol: RolUsuario;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Ocurrió un error inesperado.";
+}
 
 export default function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioPanel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   
   // Modal de contraseña
-  const [passwordUser, setPasswordUser] = useState<any>(null);
+  const [passwordUser, setPasswordUser] = useState<UsuarioPanel | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
   // Modal de eliminación
-  const [deletingUser, setDeletingUser] = useState<any>(null);
+  const [deletingUser, setDeletingUser] = useState<UsuarioPanel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const router = useRouter();
 
   const [formData, setFormData] = useState({
     dni: "",
@@ -35,23 +45,16 @@ export default function UsuariosPage() {
 
   const fetchUsuarios = async () => {
     const querySnapshot = await getDocs(collection(db, "usuarios"));
-    const list = querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const list = querySnapshot.docs.map((document) => ({
+      id: document.id,
+      ...document.data(),
+    })) as UsuarioPanel[];
     setUsuarios(list);
   };
 
-  // Verificar rol y cargar usuarios
   useEffect(() => {
-    const init = async () => {
+    const loadUsuarios = async () => {
       try {
-        if (!auth.currentUser) return;
-        const email = auth.currentUser.email || "";
-        const userDoc = await getDoc(doc(db, "usuarios", email));
-
-        if (userDoc.exists() && userDoc.data().rol !== "administrador") {
-          router.push("/dashboard");
-          return;
-        }
-
         await fetchUsuarios();
       } catch (error) {
         console.error("Error inicializando:", error);
@@ -59,18 +62,17 @@ export default function UsuariosPage() {
         setLoading(false);
       }
     };
-    init();
-  }, [router]);
 
-
+    void loadUsuarios();
+  }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setMessage({ text: "", type: "" });
 
-    if (formData.password.length < 6) {
-      setMessage({ text: "La contraseña debe tener al menos 6 caracteres.", type: "error" });
+    if (formData.password.length < 8) {
+      setMessage({ text: "La contraseña debe tener al menos 8 caracteres.", type: "error" });
       setSaving(false);
       return;
     }
@@ -90,18 +92,21 @@ export default function UsuariosPage() {
       });
       setFormData({ dni: "", nombre: "", rol: "usuario", password: "" });
       await fetchUsuarios();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creando usuario:", error);
-      setMessage({ text: `❌ ${error.message}`, type: "error" });
+      setMessage({ text: `❌ ${getErrorMessage(error)}`, type: "error" });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleChangeRole = async (userId: string, newRole: string) => {
+  const handleChangeRole = async (userId: string, newRole: RolUsuario) => {
     setUpdatingId(userId);
     try {
-      await updateDoc(doc(db, "usuarios", userId), { rol: newRole });
+      await authenticatedPost<{ success: true }>('/api/auth/update-role', {
+        userEmail: userId,
+        newRole,
+      });
       setMessage({ text: "Rol actualizado correctamente.", type: "success" });
       await fetchUsuarios();
       setTimeout(() => setMessage({ text: "", type: "" }), 3000);
@@ -115,72 +120,56 @@ export default function UsuariosPage() {
 
   const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passwordUser || !auth.currentUser) return;
-    if (newPassword.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres.");
+    if (!passwordUser) return;
+    if (newPassword.length < 8) {
+      alert("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
     setSavingPassword(true);
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: passwordUser.uid,
-          userEmail: passwordUser.id, // Fallback si no hay uid
-          newPassword: newPassword,
-          adminEmail: auth.currentUser.email, // Validar rol en servidor
-        }),
+      await authenticatedPost<{ success: true }>('/api/auth/change-password', {
+        uid: passwordUser.uid || '',
+        userEmail: passwordUser.id,
+        newPassword,
       });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
 
       setMessage({ text: `✅ Contraseña de ${passwordUser.nombre} actualizada correctamente.`, type: "success" });
       setPasswordUser(null);
       setNewPassword("");
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert(getErrorMessage(error));
     } finally {
       setSavingPassword(false);
     }
   };
 
   const handleDeleteUserConfirm = async () => {
-    if (!deletingUser || !auth.currentUser) return;
+    if (!deletingUser) return;
     
     setIsDeleting(true);
     try {
-      const response = await fetch('/api/auth/delete-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: deletingUser.uid,
-          userEmail: deletingUser.id, // Fallback si no hay uid
-          adminEmail: auth.currentUser.email,
-        }),
+      await authenticatedPost<{ success: true }>('/api/auth/delete-user', {
+        uid: deletingUser.uid || '',
+        userEmail: deletingUser.id,
       });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
 
       setMessage({ text: `✅ Usuario ${deletingUser.nombre} eliminado permanentemente.`, type: "success" });
       setDeletingUser(null);
       await fetchUsuarios();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert(getErrorMessage(error));
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const getRoleSelect = (usr: any) => {
+  const getRoleSelect = (usr: UsuarioPanel) => {
     return (
       <div className="relative">
         <select
           value={usr.rol}
-          onChange={(e) => handleChangeRole(usr.id, e.target.value)}
+          onChange={(e) => handleChangeRole(usr.id, e.target.value as RolUsuario)}
           disabled={updatingId === usr.id}
           className={`appearance-none outline-none font-bold text-xs px-3 py-1.5 rounded-full border cursor-pointer w-32 ${
             usr.rol === 'administrador' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :

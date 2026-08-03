@@ -1,23 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useContactConfig } from '@/lib/firebase/use-contact-config';
 
 export default function Footer() {
-  const [whatsapp, setWhatsapp] = useState("51961858568");
-  const [correo, setCorreo] = useState("karen.alcaldesa2026@gmail.com");
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, "config", "contacto"), (doc) => {
-      if (doc.exists()) {
-        if (doc.data().whatsapp) setWhatsapp(doc.data().whatsapp);
-        if (doc.data().correo) setCorreo(doc.data().correo);
-      }
-    });
-    return () => unsub();
-  }, []);
+  const { whatsapp, correo } = useContactConfig();
 
   return (
     <footer className="bg-[#041c3a] text-white pt-16 pb-8">
@@ -51,7 +38,7 @@ export default function Footer() {
             <h4 className="font-heading font-bold text-2xl mb-6 text-[#ffcc00]">Participa</h4>
             <ul className="flex flex-col gap-4">
               <li><Link href="/unete" className="text-white font-medium hover:text-[#ffcc00] transition-colors">Únete al equipo</Link></li>
-              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-[#ffcc00] transition-colors">WhatsApp Oficial</a></li>
+              <li><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-[#ffcc00] transition-colors">WhatsApp Oficial</a></li>
               <li><a href={`mailto:${correo}`} className="text-white font-medium hover:text-[#ffcc00] transition-colors">Correo de contacto</a></li>
             </ul>
           </div>

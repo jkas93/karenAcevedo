@@ -9,7 +9,7 @@ import { Camera, Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react
 import Image from 'next/image';
 
 export default function DigitacionCentralPage() {
-  const { locales, mesas, actas, loading: globalLoading } = useElectoral();
+  const { locales, mesas, loading: globalLoading } = useElectoral();
   
   const [localSeleccionado, setLocalSeleccionado] = useState<string>('');
   const [mesaSeleccionada, setMesaSeleccionada] = useState<string>('');

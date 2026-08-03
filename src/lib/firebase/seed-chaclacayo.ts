@@ -73,7 +73,7 @@ export const seedColegiosChaclacayo = async () => {
     });
 
     // Generar correlativo de mesas
-    let numeroMesa = 45000 + Math.floor(Math.random() * 1000);
+    const numeroMesa = 45000 + Math.floor(Math.random() * 1000);
     for (let i = 0; i < local.total_mesas; i++) {
       const nuevaMesaRef = doc(mesasRef);
       batch.set(nuevaMesaRef, {
@@ -112,7 +112,7 @@ export const importarBaseElectoralPersonalizada = async (filas: FilaImportacionE
   const LAT_BASE = -11.9818;
   const LNG_BASE = -76.7651;
 
-  filas.forEach((f, idx) => {
+  filas.forEach((f) => {
     const nombreLocal = f.local?.trim().toUpperCase();
     if (!nombreLocal || !f.mesa) return;
 

@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Loader2, ArrowLeft } from "lucide-react";
+import { Lock, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -24,18 +24,18 @@ export default function LoginPage() {
     try {
       // Firebase auth requiere un email, usamos el DNI + un dominio falso interno
       const fakeEmail = `${dni}@fuerzaciudadana.pe`;
-      const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, password);
+      await signInWithEmailAndPassword(auth, fakeEmail, password);
       
-      // Obtener el rol del usuario
       const userDoc = await getDoc(doc(db, "usuarios", fakeEmail));
-      
-      if (userDoc.exists() && userDoc.data().rol === 'personero') {
-        router.push("/personero");
-      } else {
-        router.push("/dashboard");
+      if (!userDoc.exists()) {
+        await signOut(auth);
+        throw new Error('La cuenta no tiene un perfil autorizado.');
       }
-    } catch (err: any) {
-      console.error(err);
+
+      const role = userDoc.data().rol;
+      router.replace(role === 'digitador' ? "/dashboard/digitacion" : "/dashboard");
+    } catch (error: unknown) {
+      console.error(error);
       setError("Credenciales incorrectas o problemas de conexión.");
     } finally {
       setLoading(false);

@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service firebase.storage {
+  // Requiere roles/firebaserules.firestoreServiceAgent para consultar perfiles.
+  match /b/{bucket}/o {
+    function isAuthenticated() {
+      return request.auth != null && request.auth.token.email is string;
+    }
+
+    function role() {
+      return firestore.get(
+        /databases/(default)/documents/usuarios/$(request.auth.token.email)
+      ).data.rol;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && role() == 'administrador';
+    }
+
+    function canUploadActa() {
+      return isAuthenticated() && role() in ['administrador', 'digitador'];
+    }
+
+    match /actas/{fileName} {
+      allow read: if isAuthenticated();
+      allow create: if canUploadActa()
+        && resource == null
+        && fileName.matches('.*\\.webp')
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

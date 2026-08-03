@@ -33,11 +33,6 @@ export default function DashboardPage() {
       v.zona?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Al cambiar la búsqueda, regresar a la página 1
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
   const totalPages = Math.ceil(filteredVoluntarios.length / itemsPerPage);
   const paginatedVoluntarios = filteredVoluntarios.slice(
     (currentPage - 1) * itemsPerPage,
@@ -161,7 +156,10 @@ export default function DashboardPage() {
               type="text"
               placeholder="Buscar por nombre, DNI o celular..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
             />
           </div>

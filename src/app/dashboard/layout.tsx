@@ -2,18 +2,47 @@
 
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Users, Settings, Loader2, Menu, X, Map, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { LogOut, Users, Settings, Loader2, Menu, X, Map, ChevronLeft, ChevronRight, Calendar, CalendarDays } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ElectoralProvider } from "@/lib/firebase/ElectoralContext";
+import type { RolUsuario } from "@/lib/firebase/types";
+
+const VALID_ROLES: RolUsuario[] = ['administrador', 'candidata', 'digitador', 'usuario'];
+
+import { PwaControls } from "@/components/pwa/PwaControls";
+function isRolUsuario(value: unknown): value is RolUsuario {
+  return typeof value === 'string' && VALID_ROLES.includes(value as RolUsuario);
+}
+
+function defaultDashboardRoute(role: RolUsuario): string {
+  return role === 'digitador' ? '/dashboard/digitacion' : '/dashboard';
+}
+
+function canAccessDashboardPath(pathname: string, role: RolUsuario): boolean {
+  if (pathname === '/dashboard') {
+    return ['administrador', 'candidata', 'usuario'].includes(role);
+  }
+  if (pathname.startsWith('/dashboard/calendario')) return true;
+  if (pathname.startsWith('/dashboard/agenda') || pathname.startsWith('/dashboard/control-electoral')) {
+    return ['administrador', 'candidata'].includes(role);
+  }
+  if (pathname.startsWith('/dashboard/digitacion')) {
+    return ['administrador', 'digitador'].includes(role);
+  }
+  if (pathname.startsWith('/dashboard/configuracion') || pathname.startsWith('/dashboard/usuarios')) {
+    return role === 'administrador';
+  }
+  return false;
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>("usuario");
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<RolUsuario | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const router = useRouter();
@@ -22,32 +51,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
-        router.push("/login");
-      } else {
-        setUser(currentUser);
-        try {
-          const emailKey = currentUser.email || "";
-          const userDoc = await getDoc(doc(db, "usuarios", emailKey));
-          if (userDoc.exists()) {
-            const rol = userDoc.data().rol;
-            setUserRole(rol);
-          }
-        } catch (error) {
-          console.error("Error obteniendo rol del usuario:", error);
-        }
+        setUser(null);
+        setUserRole(null);
+        setLoading(false);
+        router.replace("/login");
+        return;
       }
-      setLoading(false);
+
+      try {
+        const emailKey = currentUser.email?.trim().toLowerCase();
+        if (!emailKey) throw new Error('La cuenta no tiene correo asociado.');
+
+        const userDoc = await getDoc(doc(db, "usuarios", emailKey));
+        const role = userDoc.data()?.rol;
+        if (!userDoc.exists() || !isRolUsuario(role)) {
+          throw new Error('La cuenta no tiene un perfil autorizado.');
+        }
+
+        setUser(currentUser);
+        setUserRole(role);
+      } catch (error) {
+        console.error("Error obteniendo rol del usuario:", error);
+        setUser(null);
+        setUserRole(null);
+        await signOut(auth);
+        router.replace("/login");
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
   }, [router]);
 
+  const pathAllowed = userRole ? canAccessDashboardPath(pathname, userRole) : false;
+
+  useEffect(() => {
+    if (!loading && userRole && !pathAllowed) {
+      router.replace(defaultDashboardRoute(userRole));
+    }
+  }, [loading, pathAllowed, router, userRole]);
+
   const handleLogout = async () => {
     await signOut(auth);
-    router.push("/login");
+    router.replace("/login");
   };
 
-  if (loading) {
+  if (loading || (userRole && !pathAllowed)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 size={40} className="animate-spin text-primary" />
@@ -55,7 +105,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) return null;
+  if (!user || !userRole) return null;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative">
@@ -73,6 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button 
           className="p-2 text-gray-500 hover:bg-slate-100 rounded-lg"
           onClick={() => setMenuOpen(true)}
+          aria-label="Abrir menú"
         >
           <Menu size={24} />
         </button>
@@ -95,6 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Toggle Button for desktop */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
+          aria-label={isCollapsed ? "Expandir menú" : "Contraer menú"}
           className="hidden md:flex absolute -right-3 top-10 bg-white border border-gray-200 text-gray-500 rounded-full p-1 z-50 hover:text-primary hover:border-primary shadow-sm"
         >
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -117,6 +169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button 
             className="md:hidden p-2 text-gray-500 hover:bg-slate-100 rounded-lg"
             onClick={() => setMenuOpen(false)}
+            aria-label="Cerrar menú"
           >
             <X size={24} />
           </button>
@@ -126,6 +179,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <nav className="flex-1 space-y-2">
             
             {/* VOLUNTARIOS: administrador, candidata, usuario */}
+            <Link
+              href="/dashboard/calendario"
+              onClick={() => setMenuOpen(false)}
+              className={`flex items-center gap-3 py-3 font-medium transition-colors rounded-xl ${isCollapsed && !menuOpen ? 'justify-center px-0' : 'px-4'} ${pathname.startsWith('/dashboard/calendario') ? 'bg-blue-50 text-primary-dark font-bold md:border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50'}`}
+              title={isCollapsed ? "Calendario operativo" : undefined}
+            >
+              <CalendarDays size={20} className={pathname.startsWith('/dashboard/calendario') ? 'text-primary' : 'text-gray-400'} />
+              {(!isCollapsed || menuOpen) && <span>Calendario operativo</span>}
+            </Link>
+
             {['administrador', 'candidata', 'usuario'].includes(userRole) && (
               <Link 
                 href="/dashboard" 
@@ -214,10 +277,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Contenido principal */}
       <main className={`flex-1 w-full overflow-y-auto p-4 md:p-10 transition-all duration-300`}>
-        <ElectoralProvider>
+        <ElectoralProvider key={userRole} role={userRole}>
           {children}
         </ElectoralProvider>
       </main>
+            {(!isCollapsed || menuOpen) && <div className="mb-4"><PwaControls /></div>}
     </div>
   );
 }

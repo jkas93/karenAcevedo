@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { MapPin, Users, CheckCircle2, TrendingUp, AlertTriangle, Loader2, Wifi, Maximize, Minimize, Eye, X, Camera } from 'lucide-react';
 import {
@@ -452,12 +453,19 @@ export default function ControlElectoralDashboard() {
           <div className="relative bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4 border-b">
               <h3 className="font-bold text-lg">Evidencia del Acta</h3>
-              <button onClick={() => setFotoPreview(null)} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+              <button onClick={() => setFotoPreview(null)} aria-label="Cerrar visor de acta" className="p-1 hover:bg-slate-100 rounded-full transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="flex-grow overflow-auto p-4 flex justify-center items-center bg-slate-100">
-              <img src={fotoPreview} alt="Acta Electoral" className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-sm" />
+              <Image
+                src={fotoPreview}
+                alt="Acta Electoral"
+                width={1200}
+                height={900}
+                unoptimized
+                className="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-lg shadow-sm"
+              />
             </div>
           </div>
         </div>

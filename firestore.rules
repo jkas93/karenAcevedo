@@ -1,88 +1,232 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ─── Helper: obtener rol del usuario autenticado ───────────────────────
-    function getUserRole() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.token.email)).data.rol;
+    function isAuthenticated() {
+      return request.auth != null && request.auth.token.email is string;
     }
 
-    function isAuthenticated() {
-      return request.auth != null;
+    function profilePath() {
+      return /databases/$(database)/documents/usuarios/$(request.auth.token.email);
+    }
+
+    function hasProfile() {
+      return isAuthenticated() && exists(profilePath());
+    }
+
+    function role() {
+      return get(profilePath()).data.rol;
     }
 
     function isAdmin() {
-      return isAuthenticated() && getUserRole() == 'administrador';
+      return hasProfile() && role() == 'administrador';
     }
 
-    function isAdminOrCandidata() {
-      return isAuthenticated() && getUserRole() in ['administrador', 'candidata'];
+    function isCandidate() {
+      return hasProfile() && role() == 'candidata';
     }
 
-    function isTeamVoluntarios() {
-      return isAuthenticated() && getUserRole() in ['administrador', 'candidata', 'usuario'];
+    function isDigitizer() {
+      return hasProfile() && role() == 'digitador';
     }
 
-    // ─── Voluntarios ──────────────────────────────────────────────────────
-    // Creación pública (para que funcione el formulario web /unete)
-    // Lectura y modificación solo para el equipo autorizado
+    function isVolunteerTeam() {
+      return hasProfile() && role() in ['administrador', 'candidata', 'usuario'];
+    }
+
+    function isSelf(userId) {
+      return isAuthenticated() && request.auth.token.email == userId;
+    }
+
+    function validVolunteer() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['nombre', 'telefono', 'ayuda', 'estado', 'fecha'])
+        && data.keys().hasOnly(['nombre', 'telefono', 'dni', 'zona', 'ayuda', 'estado', 'fecha'])
+        && data.nombre is string
+        && data.nombre.size() >= 2
+        && data.nombre.size() <= 100
+        && data.telefono is string
+        && data.telefono.size() >= 9
+        && data.telefono.size() <= 20
+        && (!('dni' in data) || (data.dni is string && data.dni.size() <= 8))
+        && (!('zona' in data) || (data.zona is string && data.zona.size() <= 100))
+        && data.ayuda in ['difusion', 'voluntariado', 'personero']
+        && data.estado == 'pendiente'
+        && data.fecha == request.time;
+    }
+
+    function validAgenda() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['titulo', 'descripcion', 'ubicacion', 'etiqueta', 'fechaDestacada'])
+        && data.keys().hasOnly(['titulo', 'descripcion', 'ubicacion', 'etiqueta', 'fechaDestacada', 'fechaReal', 'createdAt'])
+        && data.titulo is string
+        && data.titulo.size() >= 2
+        && data.titulo.size() <= 120
+        && data.descripcion is string
+        && data.descripcion.size() <= 2000
+        && data.ubicacion is string
+        && data.ubicacion.size() <= 200
+        && data.etiqueta is string
+        && data.etiqueta.size() <= 30
+        && data.fechaDestacada is string
+        && data.fechaDestacada.size() <= 30;
+    }
+
+    function validCalendarActivity() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'titulo', 'descripcion', 'inicio', 'fin', 'todoElDia', 'ubicacion',
+          'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado',
+          'creadoPor', 'creadoPorNombre', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'titulo', 'descripcion', 'inicio', 'fin', 'todoElDia', 'ubicacion',
+          'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado',
+          'creadoPor', 'creadoPorNombre', 'createdAt', 'updatedAt'
+        ])
+        && data.titulo is string
+        && data.titulo.size() >= 2
+        && data.titulo.size() <= 120
+        && data.descripcion is string
+        && data.descripcion.size() <= 2000
+        && data.inicio is timestamp
+        && data.fin is timestamp
+        && data.fin > data.inicio
+        && data.todoElDia is bool
+        && data.ubicacion is string
+        && data.ubicacion.size() <= 200
+        && data.responsableId is string
+        && data.responsableId.size() <= 254
+        && data.responsableNombre is string
+        && data.responsableNombre.size() >= 1
+        && data.responsableNombre.size() <= 120
+        && data.categoria in ['territorio', 'reunion', 'comunicacion', 'capacitacion', 'electoral', 'logistica']
+        && data.prioridad in ['baja', 'normal', 'alta']
+        && data.estado in ['programada', 'confirmada', 'completada', 'cancelada']
+        && data.creadoPor is string
+        && data.creadoPorNombre is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && exists(/databases/$(database)/documents/usuarios/$(data.responsableId));
+    }
+    function validActa(docId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'mesa_id',
+          'votos_partido_a',
+          'votos_partido_b',
+          'votos_partido_c',
+          'votos_partido_d',
+          'votos_blancos',
+          'votos_nulos',
+          'timestamp'
+        ])
+        && data.keys().hasOnly([
+          'mesa_id',
+          'votos_partido_a',
+          'votos_partido_b',
+          'votos_partido_c',
+          'votos_partido_d',
+          'votos_blancos',
+          'votos_nulos',
+          'foto_url',
+          'timestamp'
+        ])
+        && data.mesa_id == docId
+        && data.mesa_id is string
+        && data.votos_partido_a is int && data.votos_partido_a >= 0
+        && data.votos_partido_b is int && data.votos_partido_b >= 0
+        && data.votos_partido_c is int && data.votos_partido_c >= 0
+        && data.votos_partido_d is int && data.votos_partido_d >= 0
+        && data.votos_blancos is int && data.votos_blancos >= 0
+        && data.votos_nulos is int && data.votos_nulos >= 0
+        && (!('foto_url' in data) || (data.foto_url is string && data.foto_url.size() <= 2000))
+        && data.timestamp == request.time
+        && exists(/databases/$(database)/documents/mesas/$(docId));
+    }
+
     match /voluntarios/{docId} {
-      allow read: if isTeamVoluntarios();
-      allow create: if true;
-      allow update, delete: if isTeamVoluntarios();
+      allow create: if validVolunteer();
+      allow read: if isVolunteerTeam();
+      allow update: if isVolunteerTeam()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+        && request.resource.data.estado in ['pendiente', 'contactado', 'rechazado'];
+      allow delete: if isAdmin();
     }
 
-    // ─── Usuarios ─────────────────────────────────────────────────────────
-    // Cualquier autenticado puede leer su propio perfil
-    // Solo admin puede crear/modificar
     match /usuarios/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if false; // No se borra desde cliente
+      allow get: if isSelf(userId) || isAdmin() || isCandidate();
+      allow list: if isAdmin() || isCandidate();
+      allow create, update, delete: if false;
     }
 
-    // ─── Locales de votación ──────────────────────────────────────────────
-    // Solo lectura para todos los autenticados
-    // Solo admin puede cargar/modificar
     match /locales/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if hasProfile();
+      allow create, update, delete: if isAdmin();
     }
 
-    // ─── Mesas ────────────────────────────────────────────────────────────
-    // Lectura para todos los autenticados (personeros necesitan ver su mesa)
-    // Escritura para todos los autenticados (admin asigna, personero actualiza estado via acta)
     match /mesas/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if hasProfile();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isDigitizer()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+          && resource.data.estado == 'pendiente'
+          && request.resource.data.estado == 'enviada');
     }
 
-    // ─── Actas ────────────────────────────────────────────────────────────
-    // Lectura para admin y candidata
-    // Creación para personeros (cualquier autenticado puede crear)
-    // No se modifica ni elimina (inmutabilidad electoral)
     match /actas/{docId} {
-      allow read: if isAdminOrCandidata();
-      allow create: if isAuthenticated();
+      allow read: if isAdmin() || isCandidate();
+      allow create: if (isAdmin() || isDigitizer())
+        && !exists(/databases/$(database)/documents/actas/$(docId))
+        && validActa(docId);
       allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /config/{docId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasAll(['whatsapp', 'correo'])
+        && request.resource.data.keys().hasOnly(['whatsapp', 'correo'])
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() >= 9
+        && request.resource.data.whatsapp.size() <= 15
+        && request.resource.data.correo is string
+        && request.resource.data.correo.size() <= 254;
       allow delete: if false;
     }
 
-    // ─── Configuración ────────────────────────────────────────────────────
-    // Lectura pública (la web pública usa estos datos para botones de contacto)
-    // Escritura solo para admin y candidata
-    match /config/{docId} {
-      allow read: if true;
-      allow write: if isAdminOrCandidata();
-    }
-
-    // ─── Agenda Pública ───────────────────────────────────────────────────
-    // Lectura pública (para que se vea en /movimiento)
-    // Escritura solo para admin y candidata
     match /agenda/{docId} {
       allow read: if true;
-      allow write: if isAdminOrCandidata();
+      allow create, update: if (isAdmin() || isCandidate()) && validAgenda();
+      allow delete: if isAdmin() || isCandidate();
+    }
+
+    match /calendario_actividades/{docId} {
+      allow read: if hasProfile();
+      allow create: if (isAdmin() || isCandidate())
+        && request.resource.data.creadoPor == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && validCalendarActivity();
+      allow update: if (isAdmin() || isCandidate())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'titulo', 'descripcion', 'inicio', 'fin', 'todoElDia', 'ubicacion',
+          'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado',
+          'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && validCalendarActivity();
+      allow delete: if isAdmin() || isCandidate();
+    }
+
+    match /pushSubscriptions/{docId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

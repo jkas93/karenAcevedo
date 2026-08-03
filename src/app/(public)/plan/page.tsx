@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { Download, Building2, Laptop, Users, Briefcase, X, ChevronRight, ChevronDown, Smartphone, Monitor, Car, CheckCircle2, Shield, AlertTriangle, Heart, TrendingUp, Leaf } from "lucide-react";
+import { useState } from "react";
+import { Download, Building2, Laptop, Users, Briefcase, X, ChevronRight, Smartphone, Monitor, Car, CheckCircle2 } from "lucide-react";
 import { planData, CardData } from "./planData";
 
 type ISOCard = {
@@ -119,17 +119,6 @@ export default function PlanPage() {
       case "Laptop": return <Laptop className="text-primary-dark" size={24} />;
       case "Users": return <Users className="text-primary-dark" size={24} />;
       case "Briefcase": return <Briefcase className="text-primary-dark" size={24} />;
-      default: return null;
-    }
-  };
-
-  const getSidebarIcon = (id: string) => {
-    switch (id) {
-      case "seguridad": return <Shield size={24} />;
-      case "prevencion": return <AlertTriangle size={24} />;
-      case "barrios": return <Heart size={24} />;
-      case "economia": return <TrendingUp size={24} />;
-      case "ambiente": return <Leaf size={24} />;
       default: return null;
     }
   };

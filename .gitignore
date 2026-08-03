@@ -6,6 +6,10 @@
 .pnp.*
 .yarn/*
 !.yarn/patches
+
+# Firebase Functions
+/functions/node_modules/
+/functions/lib/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions

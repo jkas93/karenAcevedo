@@ -1,115 +1,147 @@
 import {
   collection,
   doc,
-  setDoc,
   getDocs,
-  query,
-  where,
   onSnapshot,
+  query,
+  serverTimestamp,
   Timestamp,
-  updateDoc,
+  where,
+  writeBatch,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app, db } from '../firebase';
+import type { Acta, LocalVotacion, Mesa, Usuario } from './types';
 
-// Re-exportar los tipos desde la fuente central de verdad
 export type { LocalVotacion, Mesa, Acta } from './types';
-import type { LocalVotacion, Mesa, Acta } from './types';
+export type UsuarioResumen = Pick<Usuario, 'id' | 'uid' | 'nombre' | 'dni' | 'rol'>;
 
-// Referencias a colecciones
 const localesRef = collection(db, 'locales');
 const mesasRef = collection(db, 'mesas');
 const actasRef = collection(db, 'actas');
 
-// Servicios electorales
-export const electoralService = {
-  // ─── Locales ──────────────────────────────────────────────────────────────
+type SubscriptionErrorHandler = (error: Error) => void;
 
-  /** Obtener todos los locales (one-shot, para el mapa) */
+function dateFromTimestamp(value: unknown): Date {
+  return value instanceof Timestamp ? value.toDate() : new Date(0);
+}
+
+export const electoralService = {
   getLocales: async (): Promise<LocalVotacion[]> => {
     const snapshot = await getDocs(localesRef);
     return snapshot.docs.map(
-      (d) => ({ id: d.id, ...d.data() }) as LocalVotacion
+      (document) => ({ id: document.id, ...document.data() }) as LocalVotacion,
     );
   },
 
-  /** Suscripción en tiempo real a locales */
-  subscribeToLocales: (callback: (locales: LocalVotacion[]) => void) => {
-    return onSnapshot(localesRef, (snapshot) => {
-      const locales = snapshot.docs.map(
-        (d) => ({ id: d.id, ...d.data() }) as LocalVotacion
-      );
-      callback(locales);
-    });
-  },
+  subscribeToLocales: (
+    callback: (locales: LocalVotacion[]) => void,
+    onError?: SubscriptionErrorHandler,
+  ) =>
+    onSnapshot(
+      localesRef,
+      (snapshot) => {
+        callback(
+          snapshot.docs.map(
+            (document) =>
+              ({ id: document.id, ...document.data() }) as LocalVotacion,
+          ),
+        );
+      },
+      (error) => onError?.(error),
+    ),
 
-  // ─── Mesas ────────────────────────────────────────────────────────────────
-
-  /** Obtener mesas por local (one-shot) */
   getMesasPorLocal: async (localId: string): Promise<Mesa[]> => {
-    const q = query(mesasRef, where('local_id', '==', localId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Mesa);
+    const mesasQuery = query(mesasRef, where('local_id', '==', localId));
+    const snapshot = await getDocs(mesasQuery);
+    return snapshot.docs.map(
+      (document) => ({ id: document.id, ...document.data() }) as Mesa,
+    );
   },
 
-  /** Suscripción en tiempo real a todas las mesas */
-  subscribeToMesas: (callback: (mesas: Mesa[]) => void) => {
-    return onSnapshot(mesasRef, (snapshot) => {
-      const mesas = snapshot.docs.map(
-        (d) => ({ id: d.id, ...d.data() }) as Mesa
-      );
-      callback(mesas);
-    });
-  },
-  // (Lógica de asignación de mesa a personero eliminada - flujo centralizado)
+  subscribeToMesas: (
+    callback: (mesas: Mesa[]) => void,
+    onError?: SubscriptionErrorHandler,
+  ) =>
+    onSnapshot(
+      mesasRef,
+      (snapshot) => {
+        callback(
+          snapshot.docs.map(
+            (document) => ({ id: document.id, ...document.data() }) as Mesa,
+          ),
+        );
+      },
+      (error) => onError?.(error),
+    ),
 
-  // ─── Actas ────────────────────────────────────────────────────────────────
+  subscribeToActas: (
+    callback: (actas: Acta[]) => void,
+    onError?: SubscriptionErrorHandler,
+  ) =>
+    onSnapshot(
+      actasRef,
+      (snapshot) => {
+        callback(
+          snapshot.docs.map((document) => {
+            const data = document.data();
+            return {
+              id: document.id,
+              ...data,
+              timestamp: dateFromTimestamp(data.timestamp),
+            } as Acta;
+          }),
+        );
+      },
+      (error) => onError?.(error),
+    ),
 
-  /** Suscripción en tiempo real a todas las actas (para el totalizador) */
-  subscribeToActas: (callback: (actas: Acta[]) => void) => {
-    return onSnapshot(actasRef, (snapshot) => {
-      const actas = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        timestamp: (d.data().timestamp as Timestamp).toDate(),
-      })) as Acta[];
-      callback(actas);
-    });
-  },
-
-  /**
-   * Guardar un acta enviada por un personero.
-   * Simultáneamente actualiza el estado de la mesa a "enviada".
-   */
   guardarActa: async (acta: Omit<Acta, 'id' | 'timestamp'>) => {
-    const nuevoActaRef = doc(actasRef);
-    await setDoc(nuevoActaRef, {
-      ...acta,
-      timestamp: Timestamp.now(),
-    });
-    // Marcar la mesa como enviada
+    const batch = writeBatch(db);
+    const actaRef = doc(db, 'actas', acta.mesa_id);
     const mesaRef = doc(db, 'mesas', acta.mesa_id);
-    await updateDoc(mesaRef, { estado: 'enviada' });
+
+    batch.set(actaRef, {
+      ...acta,
+      timestamp: serverTimestamp(),
+    });
+    batch.update(mesaRef, { estado: 'enviada' });
+    await batch.commit();
   },
 
-  /** Subir foto del acta (comprimida a WebP) a Firebase Storage */
   subirFotoActa: async (archivo: File, mesaId: string): Promise<string> => {
+    if (!archivo.type.startsWith('image/')) {
+      throw new Error('El archivo del acta debe ser una imagen.');
+    }
+    if (archivo.size > 10 * 1024 * 1024) {
+      throw new Error('La imagen del acta no debe superar los 10 MB.');
+    }
+
     const storage = getStorage(app);
     const nombreArchivo = `actas/${mesaId}_${Date.now()}.webp`;
     const storageRef = ref(storage, nombreArchivo);
-    await uploadBytes(storageRef, archivo);
+    await uploadBytes(storageRef, archivo, { contentType: 'image/webp' });
     return getDownloadURL(storageRef);
   },
 
-  // ─── Digitadores (usuarios con rol=digitador) ───────────────────────────────
-
-  /** Suscripción en tiempo real a usuarios con rol "digitador" */
-  getDigitadores: (callback: (digitadores: any[]) => void) => {
+  getDigitadores: (
+    callback: (digitadores: UsuarioResumen[]) => void,
+    onError?: SubscriptionErrorHandler,
+  ) => {
     const usuariosRef = collection(db, 'usuarios');
-    const q = query(usuariosRef, where('rol', '==', 'digitador'));
-    return onSnapshot(q, (snapshot) => {
-      const digitadores = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      callback(digitadores);
-    });
+    const digitadoresQuery = query(usuariosRef, where('rol', '==', 'digitador'));
+
+    return onSnapshot(
+      digitadoresQuery,
+      (snapshot) => {
+        callback(
+          snapshot.docs.map(
+            (document) =>
+              ({ id: document.id, ...document.data() }) as UsuarioResumen,
+          ),
+        );
+      },
+      (error) => onError?.(error),
+    );
   },
 };

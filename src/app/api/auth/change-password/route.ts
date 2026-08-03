@@ -1,41 +1,37 @@
 import { NextResponse } from 'next/server';
+import { getAdminServices } from '@/lib/firebase-admin';
+import {
+  ApiError,
+  apiErrorResponse,
+  readJsonBody,
+  requireAdmin,
+} from '@/lib/server/admin-auth';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { getAdminServices } = await import('@/lib/firebase-admin');
-    const { adminAuth, adminDb } = getAdminServices();
-    const { uid, userEmail, newPassword, adminEmail } = await req.json();
+    await requireAdmin(request);
+    const body = await readJsonBody(request);
+    const uid = typeof body.uid === 'string' ? body.uid.trim() : '';
+    const userEmail =
+      typeof body.userEmail === 'string' ? body.userEmail.trim().toLowerCase() : '';
+    const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
 
-    if ((!uid && !userEmail) || !newPassword || !adminEmail) {
-      return NextResponse.json({ error: 'Faltan parámetros (uid o userEmail, newPassword, adminEmail)' }, { status: 400 });
+    if (!uid && !userEmail) {
+      throw new ApiError(400, 'Debes seleccionar un usuario.');
+    }
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      throw new ApiError(400, 'La contraseña debe tener entre 8 y 128 caracteres.');
     }
 
-    if (newPassword.length < 6) {
-      return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
-    }
+    const { adminAuth } = getAdminServices();
+    const targetUid = uid || (await adminAuth.getUserByEmail(userEmail)).uid;
+    await adminAuth.updateUser(targetUid, { password: newPassword });
 
-    // Seguridad: Verificar que el solicitante sea Administrador
-    const adminDoc = await adminDb.collection('usuarios').doc(adminEmail).get();
-    
-    if (!adminDoc.exists || adminDoc.data()?.rol !== 'administrador') {
-      return NextResponse.json({ error: 'No autorizado. Se requiere rol de Administrador.' }, { status: 403 });
-    }
-
-    // Obtener UID si no viene en el body
-    let targetUid = uid;
-    if (!targetUid && userEmail) {
-      const userRecord = await adminAuth.getUserByEmail(userEmail);
-      targetUid = userRecord.uid;
-    }
-
-    // Cambiar la contraseña usando Admin SDK
-    await adminAuth.updateUser(targetUid, {
-      password: newPassword,
+    return NextResponse.json({
+      success: true,
+      message: 'Contraseña actualizada correctamente.',
     });
-
-    return NextResponse.json({ success: true, message: 'Contraseña actualizada correctamente' });
-  } catch (error: any) {
-    console.error('Error cambiando contraseña:', error);
-    return NextResponse.json({ error: error.message || 'Error interno del servidor' }, { status: 500 });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
 }

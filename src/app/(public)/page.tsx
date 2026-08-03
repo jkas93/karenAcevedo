@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import UneteForm from "@/components/UneteForm";
 import EjesCarousel from "@/components/EjesCarousel";
-import { ShieldAlert, Timer, Camera, TrendingDown, Droplets, ArrowRight, Briefcase, Triangle, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 // Hook para counter animado
@@ -64,80 +64,6 @@ function CifraCard({ emoji, value, prefix, suffix, label, bgColor }: typeof cifr
       <span className="text-3xl md:text-[28px] lg:text-[32px] font-heading font-bold text-[#003366] mb-2">{display}</span>
       <span className="text-xs md:text-sm font-heading font-semibold text-[#003366] whitespace-pre-line leading-tight">{label}</span>
     </div>
-  );
-}
-
-// Carrusel Automático
-function TestimonialCarousel() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const testimonials = [
-    { text: "Su experiencia en gestión de riesgos nos da mucha tranquilidad.", name: "María Gonzales", role: "Dirigente Vecinal", img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop" },
-    { text: "La mejor candidata para recuperar el orden y la seguridad.", name: "Luis Rodríguez", role: "Comerciante", img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=150&auto=format&fit=crop" },
-    { text: "Al fin tenemos un plan técnico real para Chaclacayo.", name: "Ana Torres", role: "Madre de familia", img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=150&auto=format&fit=crop" }
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % testimonials.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [testimonials.length]);
-
-  return (
-    <>
-      {/* Vista Desktop (Grid) */}
-      <div className="hidden md:grid md:grid-cols-3 gap-8">
-        {testimonials.map((t, i) => (
-          <div key={i} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-dark italic mb-6">&quot;{t.text}&quot;</p>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden relative flex-shrink-0">
-                <Image src={t.img} alt={t.name} fill sizes="48px" className="object-cover" />
-              </div>
-              <div>
-                <h4 className="font-bold text-dark m-0">{t.name}</h4>
-                <p className="text-xs text-text">{t.role}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Vista Móvil (Carrusel) */}
-      <div className="md:hidden relative overflow-hidden rounded-2xl">
-        <div 
-          className="flex transition-transform duration-500 ease-in-out"
-          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
-        >
-          {testimonials.map((t, i) => (
-            <div key={i} className="w-full flex-shrink-0 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-              <p className="text-dark italic mb-6 text-lg">&quot;{t.text}&quot;</p>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full overflow-hidden relative flex-shrink-0">
-                  <Image src={t.img} alt={t.name} fill sizes="56px" className="object-cover" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-dark text-lg m-0">{t.name}</h4>
-                  <p className="text-sm text-text">{t.role}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Indicadores (Dots) */}
-        <div className="flex justify-center gap-2 mt-6">
-          {testimonials.map((_, i) => (
-            <button 
-              key={i}
-              onClick={() => setActiveIndex(i)}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${i === activeIndex ? 'bg-primary w-6' : 'bg-gray-300'}`}
-              aria-label={`Ir al testimonio ${i + 1}`}
-            />
-          ))}
-        </div>
-      </div>
-    </>
   );
 }
 

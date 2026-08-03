@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import type { GeoJsonObject } from 'geojson';
 import { LocalVotacion, Mesa } from '@/lib/firebase/electoral-service';
 
 // Corregir los iconos por defecto de Leaflet en Next.js
@@ -31,14 +32,14 @@ interface MapChaclacayoProps {
 
 export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [geoData, setGeoData] = useState<any>(null);
+  const [geoData, setGeoData] = useState<GeoJsonObject | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 10);
     // Cargar la data oficial en formato GeoJSON
     fetch('/data/zonas-chaclacayo.json')
       .then(res => res.json())
-      .then(data => setGeoData(data))
+      .then((data: unknown) => setGeoData(data as GeoJsonObject))
       .catch(err => console.error('Error cargando GeoJSON:', err));
     return () => clearTimeout(timer);
   }, []);

@@ -1,13 +1,18 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Save, Loader2, Phone, Mail, Database, RefreshCw, Trash2, FileSpreadsheet, Clipboard, X, Check, AlertTriangle, AlertCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useElectoral } from "@/lib/firebase/ElectoralContext";
 import { seedColegiosChaclacayo, limpiarBaseElectoral, importarBaseElectoralPersonalizada, FilaImportacionElectoral } from "@/lib/firebase/seed-chaclacayo";
 import * as XLSX from 'xlsx';
+
+type RawRow = Record<string, unknown>;
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Error inesperado.";
+}
 
 export default function ConfiguracionPage() {
   const [whatsapp, setWhatsapp] = useState("");
@@ -15,7 +20,6 @@ export default function ConfiguracionPage() {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
-  const router = useRouter();
 
   // Electoral Context
   const { locales, mesas } = useElectoral();
@@ -31,18 +35,8 @@ export default function ConfiguracionPage() {
   const [importError, setImportError] = useState("");
 
   useEffect(() => {
-    const init = async () => {
+    const loadConfig = async () => {
       try {
-        if (!auth.currentUser) return;
-
-        const email = auth.currentUser.email || "";
-        const userDoc = await getDoc(doc(db, "usuarios", email));
-
-        if (userDoc.exists() && userDoc.data().rol === "usuario") {
-          router.push("/dashboard");
-          return;
-        }
-
         const docSnap = await getDoc(doc(db, "config", "contacto"));
         if (docSnap.exists()) {
           setWhatsapp(docSnap.data().whatsapp || "");
@@ -58,8 +52,8 @@ export default function ConfiguracionPage() {
       }
     };
 
-    init();
-  }, [router]);
+    void loadConfig();
+  }, []);
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,8 +94,8 @@ export default function ConfiguracionPage() {
         text: "✅ Base electoral estándar de Chaclacayo cargada exitosamente.",
         type: "success",
       });
-    } catch (error: any) {
-      setDbMessage({ text: "❌ Error al cargar colegios y mesas: " + error.message, type: "error" });
+    } catch (error: unknown) {
+      setDbMessage({ text: "❌ Error al cargar colegios y mesas: " + getErrorMessage(error), type: "error" });
     } finally {
       setLoadingDbAction(false);
     }
@@ -122,8 +116,8 @@ export default function ConfiguracionPage() {
         text: "🗑️ Datos electorales borrados correctamente.",
         type: "success",
       });
-    } catch (error: any) {
-      setDbMessage({ text: "❌ Error al borrar datos: " + error.message, type: "error" });
+    } catch (error: unknown) {
+      setDbMessage({ text: "❌ Error al borrar datos: " + getErrorMessage(error), type: "error" });
     } finally {
       setLoadingDbAction(false);
     }
@@ -135,7 +129,7 @@ export default function ConfiguracionPage() {
    * Mapea de forma inteligente las columnas leídas para asociarlas a los campos correctos.
    * Esto permite que carguen archivos con nombres de columnas variables.
    */
-  const processRawRows = (rawRows: any[]) => {
+  const processRawRows = (rawRows: RawRow[]) => {
     if (rawRows.length === 0) {
       setParsedData([]);
       setPreviewSummary({ locales: 0, mesas: 0 });
@@ -202,51 +196,54 @@ export default function ConfiguracionPage() {
 
     setImportError("");
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = (event) => {
       try {
-        const data = evt.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const data = event.target?.result;
+        if (!(data instanceof ArrayBuffer)) {
+          throw new Error("No se pudo leer el archivo.");
+        }
+
+        const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const rawJson = XLSX.utils.sheet_to_json(sheet);
-
+        const rawJson = XLSX.utils.sheet_to_json<RawRow>(sheet, { defval: '' });
         processRawRows(rawJson);
-      } catch (err: any) {
-        setImportError("Error al procesar el archivo Excel: " + err.message);
+      } catch (error: unknown) {
+        setImportError("Error al procesar el archivo Excel: " + getErrorMessage(error));
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
-  // Procesar Pegado Masivo (Ctrl + V)
-  useEffect(() => {
-    if (!pastedText.trim()) {
+  const handlePastedTextChange = (value: string) => {
+    setPastedText(value);
+
+    if (!value.trim()) {
       setParsedData([]);
       setPreviewSummary({ locales: 0, mesas: 0 });
+      setImportError("");
       return;
     }
 
     try {
-      const lines = pastedText.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = value.split('\n').map((line) => line.trim()).filter(Boolean);
       if (lines.length === 0) return;
 
-      // Leer cabeceras de la primera línea (separadas por tabulador al pegar de excel)
-      const headers = lines[0].split('\t').map(h => h.trim());
-      
-      const rawJson = lines.slice(1).map((line) => {
+      const headers = lines[0].split('\t').map((header) => header.trim());
+      const rawJson: RawRow[] = lines.slice(1).map((line) => {
         const cells = line.split('\t');
-        const row: any = {};
-        headers.forEach((h, idx) => {
-          row[h] = cells[idx] || "";
+        const row: RawRow = {};
+        headers.forEach((header, index) => {
+          row[header] = cells[index] || "";
         });
         return row;
       });
 
       processRawRows(rawJson);
-    } catch (err: any) {
-      setImportError("Error al procesar el texto pegado: " + err.message);
+    } catch (error: unknown) {
+      setImportError("Error al procesar el texto pegado: " + getErrorMessage(error));
     }
-  }, [pastedText]);
+  };
 
   // Ejecutar la importación masiva final a Firestore
   const executeMassImport = async () => {
@@ -270,10 +267,10 @@ export default function ConfiguracionPage() {
       // Limpiar estados
       setPastedText("");
       setParsedData([]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
       setDbMessage({
-        text: "❌ Error durante la importación masiva: " + error.message,
+        text: "❌ Error durante la importación masiva: " + getErrorMessage(error),
         type: "error",
       });
     } finally {
@@ -551,7 +548,7 @@ export default function ConfiguracionPage() {
                   <textarea
                     rows={6}
                     value={pastedText}
-                    onChange={(e) => setPastedText(e.target.value)}
+                    onChange={(e) => handlePastedTextChange(e.target.value)}
                     placeholder="Mesa	Local	Dirección&#10;045001	I.E. Estenos	Av. Nicolás Ayllón&#10;045002	I.E. Estenos	Av. Nicolás Ayllón..."
                     className="w-full border rounded-2xl p-4 font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none bg-slate-50"
                   />

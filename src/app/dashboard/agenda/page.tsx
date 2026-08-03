@@ -72,7 +72,7 @@ export default function AgendaPage() {
         await agendaService.crearActividad(formData);
       }
       handleCloseModal();
-    } catch (error) {
+    } catch {
       alert("Error al guardar la actividad");
     } finally {
       setIsSaving(false);
@@ -83,7 +83,7 @@ export default function AgendaPage() {
     if (window.confirm("¿Estás seguro de eliminar esta actividad?")) {
       try {
         await agendaService.eliminarActividad(id);
-      } catch (error) {
+      } catch {
         alert("Error al eliminar");
       }
     }
@@ -95,7 +95,7 @@ export default function AgendaPage() {
         <div>
           <h1 className="text-3xl font-black text-dark mb-2">Agenda de Actividades</h1>
           <p className="text-text">
-            Administra los eventos públicos que aparecerán en la sección "Movimiento".
+            Administra los eventos públicos que aparecerán en la sección &quot;Movimiento&quot;.
           </p>
         </div>
         <button

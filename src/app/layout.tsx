@@ -13,8 +13,15 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://karenacevedo.com"),
   title: "Karen Acevedo 2027 | Fuerza Ciudadana Chaclacayo",
   description: "Plan de Gobierno Municipal para Chaclacayo 2027 - 2030 de la candidata Karen Acevedo. Seguridad, orden y desarrollo continuo para todos los vecinos.",
+  applicationName: "Equipo Karen Acevedo",
   keywords: ["Karen Acevedo", "Chaclacayo", "Elecciones 2027", "Alcaldesa Chaclacayo", "Fuerza Ciudadana", "Candidata Chaclacayo", "Seguridad Chaclacayo", "Municipalidad de Chaclacayo"],
   authors: [{ name: "Karen Acevedo" }],
+  appleWebApp: {
+    capable: true,
+    title: "Equipo Karen",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
   openGraph: {
     title: "Karen Acevedo 2027 | Alcaldesa Chaclacayo",
     description: "Gobierno con Seguridad, Orden y Desarrollo continuo para todos los vecinos.",

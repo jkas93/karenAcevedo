@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const ejes = [
@@ -35,29 +35,27 @@ export default function EjesCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev === ejes.length - 1 ? 0 : prev + 1));
-  };
+  }, []);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev === 0 ? ejes.length - 1 : prev - 1));
-  };
+  }, []);
 
-  const startAutoPlay = () => {
+  const stopAutoPlay = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      nextSlide();
-    }, 3500);
-  };
+  }, []);
 
-  const stopAutoPlay = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
+  const startAutoPlay = useCallback(() => {
+    stopAutoPlay();
+    timerRef.current = setInterval(nextSlide, 3500);
+  }, [nextSlide, stopAutoPlay]);
 
   useEffect(() => {
     startAutoPlay();
-    return () => stopAutoPlay();
-  }, []);
+    return stopAutoPlay;
+  }, [startAutoPlay, stopAutoPlay]);
 
   return (
     <>

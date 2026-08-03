@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useContactConfig } from "@/lib/firebase/use-contact-config";
 
 export default function UneteForm() {
+  const { whatsapp, correo } = useContactConfig();
   const [showExtended, setShowExtended] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,8 +64,8 @@ export default function UneteForm() {
             Si quieres un Chaclacayo diferente, necesitamos tus manos.
           </p>
           
-          <a 
-            href="#" 
+          <a
+            href={`https://wa.me/${whatsapp}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-3 bg-[#1cd464] text-white font-heading font-bold text-lg py-4 px-8 rounded-full hover:bg-[#18b856] transition-colors w-full sm:w-auto mb-8"
@@ -75,7 +77,7 @@ export default function UneteForm() {
           <div className="border-t border-gray-200 pt-6 mt-6">
             <h4 className="font-heading font-black text-dark text-lg mb-1">¿Dudas?</h4>
             <p className="text-[#4b5563] text-sm">
-              Escríbenos directamente a <a href="mailto:karen.alcaldesa2026@gmail.com" className="text-[#0070c0] hover:underline">karen.alcaldesa2026@gmail.com</a>
+              Escríbenos directamente a <a href={`mailto:${correo}`} className="text-[#0070c0] hover:underline">{correo}</a>
             </p>
           </div>
         </div>

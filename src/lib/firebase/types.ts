@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore';
+
 // ============================================================
 // TIPOS CENTRALES — Toda la app debe importar desde aquí
 // ============================================================
@@ -12,7 +14,7 @@ export type Usuario = {
   telefono?: string | null;
   correo: string;
   rol: RolUsuario;
-  fecha_creacion: Date;
+  fecha_creacion: Timestamp;
 };
 
 export type Zona = {
@@ -64,6 +66,42 @@ export type Voluntario = {
 
 // ─── TIPOS PARA AGENDA (PÚBLICA) ──────────────────────────────────────────────
 
+// Calendario operativo interno. Es independiente de la agenda publica.
+export type CategoriaActividad =
+  | 'territorio'
+  | 'reunion'
+  | 'comunicacion'
+  | 'capacitacion'
+  | 'electoral'
+  | 'logistica';
+
+export type PrioridadActividad = 'baja' | 'normal' | 'alta';
+export type EstadoActividad = 'programada' | 'confirmada' | 'completada' | 'cancelada';
+
+export interface ActividadCalendario {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  inicio: Timestamp;
+  fin: Timestamp;
+  todoElDia: boolean;
+  ubicacion: string;
+  responsableId: string;
+  responsableNombre: string;
+  categoria: CategoriaActividad;
+  prioridad: PrioridadActividad;
+  estado: EstadoActividad;
+  creadoPor: string;
+  creadoPorNombre: string;
+  createdAt?: Timestamp | null;
+  updatedAt?: Timestamp | null;
+}
+
+export type ActividadCalendarioInput = Omit<
+  ActividadCalendario,
+  'id' | 'creadoPor' | 'creadoPorNombre' | 'createdAt' | 'updatedAt'
+>;
+
 export interface ActividadAgenda {
   id: string;
   titulo: string;
@@ -71,8 +109,8 @@ export interface ActividadAgenda {
   ubicacion: string;
   etiqueta: string; // Ej. "Próx.", "Hoy", "Terminado"
   fechaDestacada: string; // Ej. "2027", "15/10"
-  fechaReal?: any; // Firestore Timestamp opcional para ordenamiento
-  createdAt?: any; // Firestore Timestamp
+  fechaReal?: Timestamp; // Firestore Timestamp opcional para ordenamiento
+  createdAt?: Timestamp | null; // Firestore Timestamp
 }
 
 // ============================================================
