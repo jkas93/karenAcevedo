@@ -11,6 +11,8 @@ import Link from "next/link";
 import { ElectoralProvider } from "@/lib/firebase/ElectoralContext";
 import type { RolUsuario } from "@/lib/firebase/types";
 
+import { PwaNotificationsProvider } from '@/components/pwa/PwaNotificationsProvider';
+
 const VALID_ROLES: RolUsuario[] = ['administrador', 'candidata', 'digitador', 'usuario'];
 
 import { PwaControls } from "@/components/pwa/PwaControls";
@@ -111,6 +113,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user || !userRole) return null;
 
   return (
+    <PwaNotificationsProvider isAdmin={userRole === 'administrador'}>
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative">
       
       {/* Mobile Header */}
@@ -287,5 +290,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
       <PwaInstallOnboarding />
     </div>
+    </PwaNotificationsProvider>
   );
 }

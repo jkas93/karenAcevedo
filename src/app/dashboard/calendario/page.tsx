@@ -44,6 +44,8 @@ import {
   type CalendarView,
 } from '@/components/calendar/calendar-config';
 
+import { usePwaNotifications } from '@/components/pwa/PwaNotificationsProvider';
+
 type DialogState = {
   activity: ActividadCalendario | null;
   date: Date;
@@ -74,6 +76,7 @@ function moveDate(date: Date, view: CalendarView, direction: -1 | 1) {
 }
 
 export default function CalendarioPage() {
+  const { coverage } = usePwaNotifications();
   const [activities, setActivities] = useState<ActividadCalendario[]>([]);
   const [responsables, setResponsables] = useState<ResponsableCalendario[]>([]);
   const [view, setView] = useState<CalendarView>('month');
@@ -302,6 +305,14 @@ export default function CalendarioPage() {
         </div>
         <LayoutList size={20} className="hidden text-blue-300 sm:block" />
       </div>
+
+      {role === 'administrador' && coverage && (
+        <div className='mt-3 text-center text-xs font-bold text-primary-dark'>
+          Cobertura de avisos: {coverage.subscribedUsers} de{' '}
+          {coverage.authorizedUsers} usuarios · {coverage.activeDevices}{' '}
+          dispositivos activos
+        </div>
+      )}
 
       {dialog && (
         <ActivityDialog
