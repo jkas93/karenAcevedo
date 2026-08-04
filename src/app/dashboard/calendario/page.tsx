@@ -297,8 +297,8 @@ export default function CalendarioPage() {
       <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-900 sm:flex-row sm:items-center">
         <div className="rounded-xl bg-white p-2.5 text-primary shadow-sm"><BellRing size={20} /></div>
         <div className="flex-1">
-          <p className="font-bold">Recibe los cambios en tu celular</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-blue-700">Instala la aplicacion y activa los avisos desde el menu lateral. Las notificaciones siempre requieren tu permiso.</p>
+          <p className="font-bold">Recibe cambios y recordatorios en tu celular</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-blue-700">Instala la aplicacion y activa los avisos desde el menu lateral. Te avisaremos de cambios, actividades proximas y estados pendientes de actualizar.</p>
         </div>
         <LayoutList size={20} className="hidden text-blue-300 sm:block" />
       </div>

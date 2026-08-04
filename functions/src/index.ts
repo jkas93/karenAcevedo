@@ -4,6 +4,8 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineJsonSecret } from 'firebase-functions/params';
 import webpush from 'web-push';
 
+export { notificarRecordatoriosCalendario } from './reminders.js';
+
 initializeApp();
 
 type WebPushConfig = {
