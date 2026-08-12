@@ -9,7 +9,8 @@ import {
   query, 
   orderBy, 
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  limit
 } from 'firebase/firestore';
 import type { ActividadAgenda } from './types';
 
@@ -18,7 +19,7 @@ const COLLECTION_NAME = 'agenda';
 export const agendaService = {
   // Suscribirse a cambios en tiempo real (para el dashboard y web pública)
   subscribe: (onData: (actividades: ActividadAgenda[]) => void, onError?: (err: Error) => void) => {
-    const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'), limit(100));
     
     return onSnapshot(
       q,
@@ -39,7 +40,7 @@ export const agendaService = {
   // Obtener de una sola vez (útil para la web pública si se prefiere no usar websockets)
   getActividades: async (): Promise<ActividadAgenda[]> => {
     try {
-      const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
+      const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'), limit(100));
       const snapshot = await getDocs(q);
       const actividades: ActividadAgenda[] = [];
       snapshot.forEach((docSnap) => {

@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/login', '/dashboard'],
+      disallow: ['/login', '/dashboard', '/ficha-equipo', '/api'],
     },
     sitemap: 'https://karenacevedo.com/sitemap.xml',
   };

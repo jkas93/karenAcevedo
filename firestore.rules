@@ -38,23 +38,6 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email == userId;
     }
 
-    function validVolunteer() {
-      let data = request.resource.data;
-      return data.keys().hasAll(['nombre', 'telefono', 'ayuda', 'estado', 'fecha'])
-        && data.keys().hasOnly(['nombre', 'telefono', 'dni', 'zona', 'ayuda', 'estado', 'fecha'])
-        && data.nombre is string
-        && data.nombre.size() >= 2
-        && data.nombre.size() <= 100
-        && data.telefono is string
-        && data.telefono.size() >= 9
-        && data.telefono.size() <= 20
-        && (!('dni' in data) || (data.dni is string && data.dni.size() <= 8))
-        && (!('zona' in data) || (data.zona is string && data.zona.size() <= 100))
-        && data.ayuda in ['difusion', 'voluntariado', 'personero']
-        && data.estado == 'pendiente'
-        && data.fecha == request.time;
-    }
-
     function validAgenda() {
       let data = request.resource.data;
       return data.keys().hasAll(['titulo', 'descripcion', 'ubicacion', 'etiqueta', 'fechaDestacada'])
@@ -134,19 +117,25 @@ service cloud.firestore {
         ])
         && data.mesa_id == docId
         && data.mesa_id is string
-        && data.votos_partido_a is int && data.votos_partido_a >= 0
-        && data.votos_partido_b is int && data.votos_partido_b >= 0
-        && data.votos_partido_c is int && data.votos_partido_c >= 0
-        && data.votos_partido_d is int && data.votos_partido_d >= 0
-        && data.votos_blancos is int && data.votos_blancos >= 0
-        && data.votos_nulos is int && data.votos_nulos >= 0
-        && (!('foto_url' in data) || (data.foto_url is string && data.foto_url.size() <= 2000))
+        && data.votos_partido_a is int && data.votos_partido_a >= 0 && data.votos_partido_a <= 2000
+        && data.votos_partido_b is int && data.votos_partido_b >= 0 && data.votos_partido_b <= 2000
+        && data.votos_partido_c is int && data.votos_partido_c >= 0 && data.votos_partido_c <= 2000
+        && data.votos_partido_d is int && data.votos_partido_d >= 0 && data.votos_partido_d <= 2000
+        && data.votos_blancos is int && data.votos_blancos >= 0 && data.votos_blancos <= 2000
+        && data.votos_nulos is int && data.votos_nulos >= 0 && data.votos_nulos <= 2000
+        && data.votos_partido_a + data.votos_partido_b + data.votos_partido_c
+          + data.votos_partido_d + data.votos_blancos + data.votos_nulos >= 1
+        && data.votos_partido_a + data.votos_partido_b + data.votos_partido_c
+          + data.votos_partido_d + data.votos_blancos + data.votos_nulos <= 2000
+        && (!('foto_url' in data) || (data.foto_url is string
+          && data.foto_url.size() <= 2000
+          && data.foto_url.matches('https://firebasestorage\\.googleapis\\.com/.*')))
         && data.timestamp == request.time
         && exists(/databases/$(database)/documents/mesas/$(docId));
     }
 
     match /voluntarios/{docId} {
-      allow create: if validVolunteer();
+      allow create: if false;
       allow read: if isVolunteerTeam();
       allow update: if isVolunteerTeam()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
@@ -162,12 +151,13 @@ service cloud.firestore {
 
     match /locales/{docId} {
       allow read: if hasProfile();
-      allow create, update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow create, delete: if false;
     }
 
     match /mesas/{docId} {
       allow read: if hasProfile();
-      allow create, delete: if isAdmin();
+      allow create, delete: if false;
       allow update: if isAdmin()
         || (isDigitizer()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
@@ -185,7 +175,7 @@ service cloud.firestore {
     }
 
     match /config/{docId} {
-      allow read: if true;
+      allow read: if hasProfile();
       allow create, update: if isAdmin()
         && request.resource.data.keys().hasAll(['whatsapp', 'correo'])
         && request.resource.data.keys().hasOnly(['whatsapp', 'correo'])
@@ -234,6 +224,18 @@ service cloud.firestore {
     }
 
     match /teamIntakeRateLimits/{docId} {
+      allow read, write: if false;
+    }
+
+    match /volunteerRateLimits/{docId} {
+      allow read, write: if false;
+    }
+
+    match /systemLocks/{docId} {
+      allow read, write: if false;
+    }
+
+    match /electoralAudit/{docId} {
       allow read, write: if false;
     }
 

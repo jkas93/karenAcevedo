@@ -125,14 +125,20 @@ export default function DigitacionCentralPage() {
       setError('Es obligatorio adjuntar la foto del acta.');
       return;
     }
+    if (totalVotosIngresados < 1 || totalVotosIngresados > 2000) {
+      setError('El total del acta debe estar entre 1 y 2000 votos.');
+      return;
+    }
 
     setIsSubmitting(true);
     setError('');
     setSuccess(false);
 
+    let fotoUrl = '';
+
     try {
       // 1. Subir Foto (Si es muy pesada, el Firebase Storage lo maneja, pero en prod deberías comprimir)
-      const fotoUrl = await electoralService.subirFotoActa(fotoArchivo, mesaSeleccionada);
+      fotoUrl = await electoralService.subirFotoActa(fotoArchivo, mesaSeleccionada);
 
       // 2. Guardar Acta
       await electoralService.guardarActa({
@@ -157,7 +163,12 @@ export default function DigitacionCentralPage() {
       setTimeout(() => setSuccess(false), 4000);
     } catch (err) {
       console.error(err);
-      setError('Ocurrió un error al guardar el acta. Revisa tu conexión.');
+      if (fotoUrl) {
+        await electoralService.eliminarFotoActa(fotoUrl).catch((cleanupError) => {
+          console.error('No se pudo retirar la foto huérfana del acta:', cleanupError);
+        });
+      }
+      setError(err instanceof Error ? err.message : 'Ocurrió un error al guardar el acta. Revisa tu conexión.');
     } finally {
       setIsSubmitting(false);
     }
@@ -256,6 +267,7 @@ export default function DigitacionCentralPage() {
                           <input 
                             type="number"
                             min="0"
+                            max="2000"
                             required
                             className="w-full pl-6 border-slate-200 rounded-md font-bold text-lg focus:ring-primary focus:border-primary"
                             value={votos[key] === 0 ? '' : votos[key]}
@@ -274,7 +286,7 @@ export default function DigitacionCentralPage() {
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Votos Blancos</label>
                     <input 
-                      type="number" min="0" required
+                      type="number" min="0" max="2000" required
                       className="w-full border-slate-200 rounded-md font-bold text-lg bg-slate-50 focus:bg-white"
                       value={votos.blancos === 0 ? '' : votos.blancos}
                       onChange={(e) => handleVotoChange('blancos', e.target.value)}
@@ -283,7 +295,7 @@ export default function DigitacionCentralPage() {
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">Votos Nulos</label>
                     <input 
-                      type="number" min="0" required
+                      type="number" min="0" max="2000" required
                       className="w-full border-slate-200 rounded-md font-bold text-lg bg-slate-50 focus:bg-white"
                       value={votos.nulos === 0 ? '' : votos.nulos}
                       onChange={(e) => handleVotoChange('nulos', e.target.value)}
@@ -325,7 +337,7 @@ export default function DigitacionCentralPage() {
                   <>
                     <Camera className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-600 font-medium">Arrastra o selecciona la imagen del acta</p>
-                    <p className="text-xs text-slate-400 mt-1">Formatos: JPG, PNG, WEBP (Max 5MB)</p>
+                    <p className="text-xs text-slate-400 mt-1">Formatos: JPG, PNG, WEBP (máx. 10 MB)</p>
                   </>
                 )}
                 
@@ -341,7 +353,7 @@ export default function DigitacionCentralPage() {
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm flex gap-2 items-start border border-red-100">
+                <div role="alert" className="bg-red-50 text-red-700 p-3 rounded-lg text-sm flex gap-2 items-start border border-red-100">
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <p>{error}</p>
                 </div>

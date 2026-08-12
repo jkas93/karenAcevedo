@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 const DEFAULT_CONTACT = {
   whatsapp: '51961858568',
@@ -13,11 +11,14 @@ export function useContactConfig() {
   const [contact, setContact] = useState(DEFAULT_CONTACT);
 
   useEffect(() => {
-    return onSnapshot(
-      doc(db, 'config', 'contacto'),
-      (snapshot) => {
-        if (!snapshot.exists()) return;
-        const data = snapshot.data();
+    const controller = new AbortController();
+
+    fetch('/api/contact', { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('No se pudo cargar la configuración de contacto.');
+        return response.json() as Promise<{ whatsapp?: unknown; correo?: unknown }>;
+      })
+      .then((data) => {
         setContact({
           whatsapp:
             typeof data.whatsapp === 'string' && data.whatsapp
@@ -28,9 +29,13 @@ export function useContactConfig() {
               ? data.correo
               : DEFAULT_CONTACT.correo,
         });
-      },
-      (error) => console.error('Error cargando datos de contacto:', error),
-    );
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error('Error cargando datos de contacto:', error);
+      });
+
+    return () => controller.abort();
   }, []);
 
   return contact;

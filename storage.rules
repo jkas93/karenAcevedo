@@ -29,7 +29,9 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'image/webp';
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        || (canUploadActa()
+          && resource.metadata.ownerUid == request.auth.uid);
     }
 
     match /{allPaths=**} {

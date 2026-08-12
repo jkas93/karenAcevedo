@@ -4,10 +4,13 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  Timestamp,
+  where,
   updateDoc,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -43,9 +46,13 @@ export const calendarioService = {
     onData: (actividades: ActividadCalendario[]) => void,
     onError?: (error: Error) => void,
   ) {
+    const oldestVisibleDate = new Date();
+    oldestVisibleDate.setDate(oldestVisibleDate.getDate() - 90);
     const activitiesQuery = query(
       collection(db, COLLECTION_NAME),
+      where('inicio', '>=', Timestamp.fromDate(oldestVisibleDate)),
       orderBy('inicio', 'asc'),
+      limit(1000),
     );
 
     return onSnapshot(
@@ -67,7 +74,7 @@ export const calendarioService = {
 
   async getResponsables(): Promise<ResponsableCalendario[]> {
     const snapshot = await getDocs(
-      query(collection(db, 'usuarios'), orderBy('nombre', 'asc')),
+      query(collection(db, 'usuarios'), orderBy('nombre', 'asc'), limit(300)),
     );
 
     return snapshot.docs.map((snapshotDoc) => ({

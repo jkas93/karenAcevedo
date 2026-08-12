@@ -6,6 +6,7 @@ import {
   doc,
   updateDoc,
   getDocs,
+  limit,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Voluntario } from './types';
@@ -19,7 +20,7 @@ export const voluntariosService = {
     callback: (voluntarios: Voluntario[]) => void,
     onError?: (error: Error) => void
   ) => {
-    const q = query(collection(db, 'voluntarios'), orderBy('fecha', 'desc'));
+    const q = query(collection(db, 'voluntarios'), orderBy('fecha', 'desc'), limit(500));
     return onSnapshot(
       q,
       (snapshot) => {
@@ -44,7 +45,7 @@ export const voluntariosService = {
 
   /** Obtener todos los voluntarios (one-shot, para exportación) */
   getAll: async (): Promise<Voluntario[]> => {
-    const snapshot = await getDocs(collection(db, 'voluntarios'));
+    const snapshot = await getDocs(query(collection(db, 'voluntarios'), orderBy('fecha', 'desc'), limit(5000)));
     return snapshot.docs.map((d) => ({
       id: d.id,
       ...d.data(),

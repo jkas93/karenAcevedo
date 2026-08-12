@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminServices } from '@/lib/firebase-admin';
 
 export const TEAM_INTAKE_CONFIG_PATH = 'teamIntakeConfig/current';
@@ -27,6 +28,17 @@ export async function getTeamInvitation(token: string) {
   if (!snapshot.exists || data?.active !== true || typeof data.tokenHash !== 'string') {
     return null;
   }
+  const legacyBase = data.updatedAt instanceof Timestamp
+    ? data.updatedAt
+    : data.createdAt instanceof Timestamp
+      ? data.createdAt
+      : null;
+  const expiresAt = data.expiresAt instanceof Timestamp
+    ? data.expiresAt.toMillis()
+    : legacyBase
+      ? legacyBase.toMillis() + 30 * 24 * 60 * 60 * 1000
+      : 0;
+  if (expiresAt <= Date.now()) return null;
 
   const received = Buffer.from(hashValue(normalized), 'hex');
   const expected = Buffer.from(data.tokenHash, 'hex');

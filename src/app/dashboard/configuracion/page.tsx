@@ -6,7 +6,6 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Save, Loader2, Phone, Mail, Database, RefreshCw, Trash2, FileSpreadsheet, Clipboard, X, Check, AlertTriangle, AlertCircle } from "lucide-react";
 import { useElectoral } from "@/lib/firebase/ElectoralContext";
 import { seedColegiosChaclacayo, limpiarBaseElectoral, importarBaseElectoralPersonalizada, FilaImportacionElectoral } from "@/lib/firebase/seed-chaclacayo";
-import * as XLSX from 'xlsx';
 
 type RawRow = Record<string, unknown>;
 
@@ -54,6 +53,15 @@ export default function ConfiguracionPage() {
 
     void loadConfig();
   }, []);
+
+  useEffect(() => {
+    if (!showImportModal) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !loadingDbAction) setShowImportModal(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [loadingDbAction, showImportModal]);
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,8 +204,9 @@ export default function ConfiguracionPage() {
 
     setImportError("");
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
+        const XLSX = await import('xlsx');
         const data = event.target?.result;
         if (!(data instanceof ArrayBuffer)) {
           throw new Error("No se pudo leer el archivo.");
@@ -462,16 +471,18 @@ export default function ConfiguracionPage() {
 
       {/* Modal: Carga Avanzada */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-title">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
             
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b">
               <div>
-                <h3 className="font-black text-xl text-dark">Carga Masiva de Locales y Mesas</h3>
+                <h3 id="import-title" className="font-black text-xl text-dark">Carga Masiva de Locales y Mesas</h3>
                 <p className="text-xs text-slate-500 mt-1">Crea tu estructura electoral arrastrando tu Excel o copiando celdas directamente.</p>
               </div>
               <button
+                type="button"
+                aria-label="Cerrar carga masiva"
                 onClick={() => setShowImportModal(false)}
                 className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-slate-100"
               >
@@ -482,6 +493,8 @@ export default function ConfiguracionPage() {
             {/* Tabs */}
             <div className="flex border-b border-gray-100 bg-slate-50 px-6 pt-2 gap-2">
               <button
+                type="button"
+                aria-pressed={importTab === 'excel'}
                 onClick={() => setImportTab('excel')}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-all ${importTab === 'excel' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
               >
@@ -489,6 +502,8 @@ export default function ConfiguracionPage() {
                 Subir Archivo Excel
               </button>
               <button
+                type="button"
+                aria-pressed={importTab === 'copy'}
                 onClick={() => setImportTab('copy')}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-all ${importTab === 'copy' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
               >

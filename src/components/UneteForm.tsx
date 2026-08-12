@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useContactConfig } from "@/lib/firebase/use-contact-config";
 
 export default function UneteForm() {
@@ -11,6 +9,8 @@ export default function UneteForm() {
   const [showExtended, setShowExtended] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [website, setWebsite] = useState("");
   
   const [formData, setFormData] = useState({
     nombre: "",
@@ -23,19 +23,23 @@ export default function UneteForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage("");
     
     try {
-      await addDoc(collection(db, "voluntarios"), {
-        ...formData,
-        estado: "pendiente",
-        fecha: serverTimestamp(),
+      const response = await fetch('/api/volunteers/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, website }),
       });
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'No se pudo enviar el registro.');
       
       setSubmitted(true);
       setFormData({ nombre: "", telefono: "", dni: "", zona: "", ayuda: "difusion" });
+      setWebsite("");
     } catch (error) {
       console.error("Error guardando datos: ", error);
-      alert("Hubo un problema de conexión. Por favor intenta de nuevo.");
+      setErrorMessage(error instanceof Error ? error.message : "Hubo un problema de conexión. Por favor intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -83,6 +87,10 @@ export default function UneteForm() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="absolute -left-[10000px] h-px w-px overflow-hidden" aria-hidden="true">
+            <label htmlFor="website">Sitio web</label>
+            <input id="website" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
+          </div>
           <div>
             <label htmlFor="nombre" className="block text-sm font-bold text-[#003366] mb-1">Nombre y Apellidos</label>
             <input 
@@ -182,6 +190,12 @@ export default function UneteForm() {
           >
             {loading ? <><Loader2 size={20} className="animate-spin" /> Enviando...</> : "Sumarme Ahora"}
           </button>
+
+          {errorMessage && (
+            <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-700">
+              {errorMessage}
+            </p>
+          )}
           
           <p className="text-center text-[#9ca3af] text-[12px] leading-tight px-4 pt-2 font-medium">
             Tus datos están seguros y serán usados únicamente para fines de comunicación de la campaña según la ley de protección de datos.

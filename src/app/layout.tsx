@@ -2,9 +2,6 @@ import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 
-const montserratVariable = "--font-montserrat";
-const openSansVariable = "--font-open-sans";
-
 export const viewport: Viewport = {
   themeColor: "#0070C0",
 };
@@ -61,7 +58,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${montserratVariable} ${openSansVariable} antialiased min-h-screen flex flex-col`}
+        className="antialiased min-h-screen flex flex-col"
       >
         <PwaInstallProvider>
           <main className="flex-grow">{children}</main>

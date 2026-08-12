@@ -9,8 +9,8 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { app, db } from '../firebase';
+import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+import { app, auth, db } from '../firebase';
 import type { Acta, LocalVotacion, Mesa, Usuario } from './types';
 
 export type { LocalVotacion, Mesa, Acta } from './types';
@@ -97,6 +97,22 @@ export const electoralService = {
     ),
 
   guardarActa: async (acta: Omit<Acta, 'id' | 'timestamp'>) => {
+    const conteos = [
+      acta.votos_partido_a,
+      acta.votos_partido_b,
+      acta.votos_partido_c,
+      acta.votos_partido_d,
+      acta.votos_blancos,
+      acta.votos_nulos,
+    ];
+    if (conteos.some((valor) => !Number.isInteger(valor) || valor < 0 || valor > 2000)) {
+      throw new Error('Cada conteo debe ser un entero entre 0 y 2000.');
+    }
+    const total = conteos.reduce((suma, valor) => suma + valor, 0);
+    if (total < 1 || total > 2000) {
+      throw new Error('El total del acta debe estar entre 1 y 2000 votos.');
+    }
+
     const batch = writeBatch(db);
     const actaRef = doc(db, 'actas', acta.mesa_id);
     const mesaRef = doc(db, 'mesas', acta.mesa_id);
@@ -117,11 +133,21 @@ export const electoralService = {
       throw new Error('La imagen del acta no debe superar los 10 MB.');
     }
 
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Debes iniciar sesión nuevamente.');
     const storage = getStorage(app);
     const nombreArchivo = `actas/${mesaId}_${Date.now()}.webp`;
     const storageRef = ref(storage, nombreArchivo);
-    await uploadBytes(storageRef, archivo, { contentType: 'image/webp' });
+    await uploadBytes(storageRef, archivo, {
+      contentType: 'image/webp',
+      customMetadata: { ownerUid: currentUser.uid },
+    });
     return getDownloadURL(storageRef);
+  },
+
+  eliminarFotoActa: async (url: string) => {
+    const storage = getStorage(app);
+    await deleteObject(ref(storage, url));
   },
 
   getDigitadores: (

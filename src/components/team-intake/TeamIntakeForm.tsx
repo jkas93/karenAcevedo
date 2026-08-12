@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -88,6 +88,27 @@ export function TeamIntakeForm({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const draftKey = `team-intake-draft:${token}`;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.sessionStorage.getItem(draftKey);
+        if (stored) setData({ ...initialData, ...JSON.parse(stored) as TeamIntakePayload });
+      } catch {
+        window.sessionStorage.removeItem(draftKey);
+      } finally {
+        setDraftReady(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftReady || submitted) return;
+    window.sessionStorage.setItem(draftKey, JSON.stringify(data));
+  }, [data, draftKey, draftReady, submitted]);
 
   const selectedShifts = useMemo(
     () => Object.values(data.disponibilidad).reduce((total, shifts) => total + shifts.length, 0),
@@ -117,6 +138,9 @@ export function TeamIntakeForm({ token }: { token: string }) {
     if (step === 0 && (!data.nombre.trim() || !/^\d{8}$/.test(data.dni) || !/^\+?\d{9,15}$/.test(data.telefono.replace(/\s/g, '')) || !data.fechaNacimiento || !data.direccionZona.trim())) {
       return 'Completa los datos personales obligatorios con formatos válidos.';
     }
+    if (step === 0 && data.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.correo)) {
+      return 'Ingresa un correo válido o deja el campo vacío.';
+    }
     if (step === 2 && data.areaApoyo === 'otra' && !data.areaOtra.trim()) return 'Especifica el área donde puedes apoyar.';
     if (step === 3 && selectedShifts === 0) return 'Selecciona al menos un turno disponible.';
     if (step === 4 && data.expectativas.trim().length < 10) return 'Escribe al menos 10 caracteres sobre tus expectativas.';
@@ -143,6 +167,7 @@ export function TeamIntakeForm({ token }: { token: string }) {
       });
       const result = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(result.error || 'No se pudo enviar la ficha.');
+      window.sessionStorage.removeItem(draftKey);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (submitError) {
@@ -176,7 +201,7 @@ export function TeamIntakeForm({ token }: { token: string }) {
           </div>
           <span className='rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-primary'>{Math.round(((step + 1) / steps.length) * 100)}%</span>
         </div>
-        <div className='mt-4 h-2 overflow-hidden rounded-full bg-slate-100'>
+        <div className='mt-4 h-2 overflow-hidden rounded-full bg-slate-100' role='progressbar' aria-label='Progreso del formulario' aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={step + 1}>
           <div className='h-full rounded-full bg-gradient-to-r from-primary to-cyan-400 transition-all' style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
         </div>
       </div>
@@ -208,7 +233,7 @@ export function TeamIntakeForm({ token }: { token: string }) {
               <Field label='Institución educativa / Universidad'><input className={inputClass} value={data.institucion} onChange={(e) => update('institucion', e.target.value)} /></Field>
             </div>
             <fieldset><legend className='mb-3 text-sm font-extrabold text-slate-700'>Habilidades y herramientas</legend><div className='grid gap-2 sm:grid-cols-2'>
-              {TEAM_SKILLS.map((skill) => <button key={skill} type='button' onClick={() => toggleSkill(skill)} className={`flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${data.habilidades.includes(skill) ? 'border-primary bg-blue-50 text-primary-dark' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}><span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${data.habilidades.includes(skill) ? 'border-primary bg-primary text-white' : 'border-slate-300'}`}>{data.habilidades.includes(skill) && <Check size={14} />}</span>{skillLabels[skill]}</button>)}
+              {TEAM_SKILLS.map((skill) => <button key={skill} type='button' aria-pressed={data.habilidades.includes(skill)} onClick={() => toggleSkill(skill)} className={`flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${data.habilidades.includes(skill) ? 'border-primary bg-blue-50 text-primary-dark' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}><span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${data.habilidades.includes(skill) ? 'border-primary bg-primary text-white' : 'border-slate-300'}`}>{data.habilidades.includes(skill) && <Check size={14} />}</span>{skillLabels[skill]}</button>)}
             </div></fieldset>
             <div className='grid gap-5 md:grid-cols-2'><Field label='Otra habilidad'><input className={inputClass} value={data.otraHabilidad} onChange={(e) => update('otraHabilidad', e.target.value)} /></Field><Field label='Idiomas / Lenguas adicionales'><input className={inputClass} value={data.idiomas} onChange={(e) => update('idiomas', e.target.value)} /></Field></div>
           </div>
@@ -217,7 +242,7 @@ export function TeamIntakeForm({ token }: { token: string }) {
         {step === 2 && (
           <div className='space-y-6'>
             <fieldset><legend className='mb-3 text-sm font-extrabold text-slate-700'>¿Has participado en campañas políticas, voluntariados o trabajo comunitario?</legend><div className='grid grid-cols-2 gap-3'>
-              {[true, false].map((value) => <button key={String(value)} type='button' onClick={() => update('experienciaPrevia', value)} className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-bold ${data.experienciaPrevia === value ? 'border-primary bg-blue-50 text-primary-dark' : 'border-slate-200 text-slate-600'}`}>{value ? 'Sí' : 'No'}</button>)}
+              {[true, false].map((value) => <button key={String(value)} type='button' aria-pressed={data.experienciaPrevia === value} onClick={() => update('experienciaPrevia', value)} className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-bold ${data.experienciaPrevia === value ? 'border-primary bg-blue-50 text-primary-dark' : 'border-slate-200 text-slate-600'}`}>{value ? 'Sí' : 'No'}</button>)}
             </div></fieldset>
             {data.experienciaPrevia && <Field label='Detalla brevemente tu rol o proyecto'><textarea className={`${inputClass} min-h-28 resize-y`} value={data.experienciaDetalle} onChange={(e) => update('experienciaDetalle', e.target.value)} /></Field>}
             <Field label='Área donde puedes apoyar con mayor impacto' required><select className={inputClass} value={data.areaApoyo} onChange={(e) => update('areaApoyo', e.target.value as TeamIntakePayload['areaApoyo'])}>{SUPPORT_AREAS.map((area) => <option key={area} value={area}>{areaLabels[area]}</option>)}</select></Field>
@@ -228,7 +253,7 @@ export function TeamIntakeForm({ token }: { token: string }) {
         {step === 3 && (
           <div className='space-y-6'>
             <div><p className='mb-3 text-sm font-extrabold text-slate-700'>Selecciona tus turnos disponibles</p><div className='space-y-3'>
-              {WEEK_DAYS.map((day) => <div key={day} className='rounded-2xl border border-slate-200 p-3 sm:grid sm:grid-cols-[110px_1fr] sm:items-center sm:gap-3'><p className='mb-2 text-sm font-black text-slate-800 sm:mb-0'>{dayLabels[day]}</p><div className='grid grid-cols-3 gap-2'>{DAY_SHIFTS.map((shift) => { const selected = data.disponibilidad[day].includes(shift); return <button key={shift} type='button' onClick={() => toggleShift(day, shift)} className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-bold transition ${selected ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{shiftLabels[shift]}</button>; })}</div></div>)}
+              {WEEK_DAYS.map((day) => <div key={day} className='rounded-2xl border border-slate-200 p-3 sm:grid sm:grid-cols-[110px_1fr] sm:items-center sm:gap-3'><p className='mb-2 text-sm font-black text-slate-800 sm:mb-0'>{dayLabels[day]}</p><div className='grid grid-cols-3 gap-2'>{DAY_SHIFTS.map((shift) => { const selected = data.disponibilidad[day].includes(shift); return <button key={shift} type='button' aria-pressed={selected} onClick={() => toggleShift(day, shift)} className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-bold transition ${selected ? 'border-primary bg-primary text-white' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{shiftLabels[shift]}</button>; })}</div></div>)}
             </div></div>
             <div className='grid gap-5 md:grid-cols-2'><Field label='Horas estimadas por semana' required><input type='number' min={1} max={80} className={inputClass} value={data.horasSemanales} onChange={(e) => update('horasSemanales', Number(e.target.value))} /></Field><Field label='Disponibilidad para viajes / desplazamientos' required><select className={inputClass} value={data.desplazamiento} onChange={(e) => update('desplazamiento', e.target.value as TeamIntakePayload['desplazamiento'])}>{TRAVEL_OPTIONS.map((option) => <option key={option} value={option}>{travelLabels[option]}</option>)}</select></Field></div>
           </div>
@@ -243,11 +268,11 @@ export function TeamIntakeForm({ token }: { token: string }) {
           </div>
         )}
 
-        {error && <div className='mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700'>{error}</div>}
+        {error && <div role='alert' className='mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700'>{error}</div>}
 
         <div className='mt-8 flex gap-3'>
           {step > 0 && <button type='button' onClick={() => setStep((current) => current - 1)} disabled={busy} className='flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50'><ArrowLeft size={17} /> Atrás</button>}
-          {step < steps.length - 1 ? <button type='button' onClick={next} className='flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 hover:bg-primary-dark'>Continuar <ArrowRight size={17} /></button> : <button type='button' onClick={() => void submit()} disabled={busy} className='flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 hover:bg-primary-dark disabled:opacity-60'>{busy ? <Loader2 size={18} className='animate-spin' /> : <Send size={18} />} Enviar ficha</button>}
+          {step < steps.length - 1 ? <button type='button' onClick={next} className='flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 hover:bg-primary-dark'>Continuar <ArrowRight size={17} /></button> : <button type='button' onClick={() => void submit()} disabled={busy || !draftReady} className='flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 hover:bg-primary-dark disabled:opacity-60'>{busy ? <Loader2 size={18} className='animate-spin' /> : <Send size={18} />} Enviar ficha</button>}
         </div>
       </div>
     </div>

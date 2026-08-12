@@ -95,16 +95,16 @@ export default function MovimientoPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                <button className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group">
+                <button type="button" disabled title="Próximamente" className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 opacity-70 cursor-not-allowed group">
                   <MessageCircle size={40} className="text-primary mb-4 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-dark">Stickers de WhatsApp</span>
-                  <span className="text-xs text-text mt-2">Pack de 10 stickers</span>
+                  <span className="text-xs text-text mt-2">Próximamente</span>
                 </button>
 
-                <button className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group">
+                <button type="button" disabled title="Próximamente" className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 opacity-70 cursor-not-allowed group">
                   <Camera size={40} className="text-secondary mb-4 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-dark">Stories para IG</span>
-                  <span className="text-xs text-text mt-2">Plantillas listas</span>
+                  <span className="text-xs text-text mt-2">Próximamente</span>
                 </button>
 
                 <div className="sm:col-span-2 flex flex-col gap-4">
