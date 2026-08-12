@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ElectoralProvider } from "@/lib/firebase/ElectoralContext";
 import type { RolUsuario } from "@/lib/firebase/types";
+import { ClipboardList } from 'lucide-react';
 
 import { PwaNotificationsProvider } from '@/components/pwa/PwaNotificationsProvider';
 
@@ -22,8 +23,8 @@ function isRolUsuario(value: unknown): value is RolUsuario {
   return typeof value === 'string' && VALID_ROLES.includes(value as RolUsuario);
 }
 
-function defaultDashboardRoute(role: RolUsuario): string {
-  return role === 'digitador' ? '/dashboard/digitacion' : '/dashboard';
+function defaultDashboardRoute(): string {
+  return '/dashboard/calendario';
 }
 
 function canAccessDashboardPath(pathname: string, role: RolUsuario): boolean {
@@ -37,7 +38,7 @@ function canAccessDashboardPath(pathname: string, role: RolUsuario): boolean {
   if (pathname.startsWith('/dashboard/digitacion')) {
     return ['administrador', 'digitador'].includes(role);
   }
-  if (pathname.startsWith('/dashboard/configuracion') || pathname.startsWith('/dashboard/usuarios')) {
+  if (pathname.startsWith('/dashboard/configuracion') || pathname.startsWith('/dashboard/usuarios') || pathname.startsWith('/dashboard/equipo')) {
     return role === 'administrador';
   }
   return false;
@@ -92,7 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!loading && userRole && !pathAllowed) {
-      router.replace(defaultDashboardRoute(userRole));
+      router.replace(defaultDashboardRoute());
     }
   }, [loading, pathAllowed, router, userRole]);
 
@@ -247,6 +248,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* CONFIGURACIÓN & GESTIÓN DE ACCESOS: administrador */}
             {userRole === 'administrador' && (
               <>
+                <Link
+                  href="/dashboard/equipo"
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 py-3 font-medium transition-colors rounded-xl ${isCollapsed && !menuOpen ? 'justify-center px-0' : 'px-4'} ${pathname.startsWith('/dashboard/equipo') ? 'bg-blue-50 text-primary-dark font-bold md:border-r-4 border-primary' : 'text-gray-500 hover:text-primary hover:bg-slate-50'}`}
+                  title={isCollapsed ? "Fichas del equipo" : undefined}
+                >
+                  <ClipboardList size={20} className={pathname.startsWith('/dashboard/equipo') ? 'text-primary' : 'text-gray-400'} />
+                  {(!isCollapsed || menuOpen) && <span>Fichas del equipo</span>}
+                </Link>
                 <Link 
                   href="/dashboard/configuracion" 
                   onClick={() => setMenuOpen(false)}

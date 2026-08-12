@@ -32,8 +32,7 @@ export default function LoginPage() {
         throw new Error('La cuenta no tiene un perfil autorizado.');
       }
 
-      const role = userDoc.data().rol;
-      router.replace(role === 'digitador' ? "/dashboard/digitacion" : "/dashboard");
+      router.replace('/dashboard/calendario');
     } catch (error: unknown) {
       console.error(error);
       setError("Credenciales incorrectas o problemas de conexión.");
