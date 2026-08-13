@@ -19,6 +19,7 @@ import {
   timestampDate,
   type CalendarView,
 } from './calendar-config';
+import { WeekTimeGrid } from './WeekTimeGrid';
 
 type CalendarBoardProps = {
   activities: ActividadCalendario[];
@@ -198,43 +199,7 @@ function MonthView(props: CalendarBoardProps) {
 }
 
 function WeekView(props: CalendarBoardProps) {
-  const days = eachDayOfInterval({
-    start: startOfWeek(props.cursor, { weekStartsOn: 1 }),
-    end: endOfWeek(props.cursor, { weekStartsOn: 1 }),
-  });
-
-  return (
-    <>
-      <div className="hidden grid-cols-7 overflow-hidden rounded-2xl border border-slate-200 bg-white lg:grid">
-        {days.map((day) => {
-          const items = activitiesForDay(props.activities, day);
-          return (
-            <div key={day.toISOString()} className="min-h-[440px] border-r border-slate-100 p-2.5 last:border-r-0">
-              <button type="button" onClick={() => props.onSelectDate(day)} className="mb-3 flex w-full flex-col items-center rounded-xl py-2 hover:bg-slate-50">
-                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">{format(day, 'EEE', { locale: es })}</span>
-                <span className={`mt-1 flex h-9 w-9 items-center justify-center rounded-full text-sm font-black ${isToday(day) ? 'bg-primary text-white' : 'text-slate-800'}`}>{format(day, 'd')}</span>
-              </button>
-              <div className="space-y-2">
-                {items.map((activity) => <ActivityCard key={activity.id} compact activity={activity} onOpen={() => props.onOpen(activity)} />)}
-                {items.length === 0 && <p className="py-8 text-center text-[10px] font-medium text-slate-300">Sin actividades</p>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="lg:hidden">
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
-          {days.map((day) => (
-            <button type="button" key={day.toISOString()} onClick={() => props.onSelectDate(day)} className={`min-w-14 rounded-2xl border px-3 py-2.5 text-center transition ${isSameDay(day, props.selectedDate) ? 'border-primary bg-primary text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-600'}`}>
-              <span className="block text-[10px] font-black uppercase">{format(day, 'EEE', { locale: es })}</span>
-              <span className="mt-1 block text-lg font-black">{format(day, 'd')}</span>
-            </button>
-          ))}
-        </div>
-        <DayAgenda day={props.selectedDate} activities={props.activities} canManage={props.canManage} onOpen={props.onOpen} onCreate={props.onCreate} />
-      </div>
-    </>
-  );
+  return <WeekTimeGrid {...props} />;
 }
 
 function ListView(props: CalendarBoardProps) {

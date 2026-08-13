@@ -66,6 +66,14 @@ type FormState = {
 
 function nextRoundedHour(base: Date) {
   const value = new Date(base);
+  if (value.getHours() === 0 && value.getMinutes() === 0) {
+    value.setHours(9, 0, 0, 0);
+    return value;
+  }
+  if ((value.getMinutes() === 0 || value.getMinutes() === 30) && value.getSeconds() === 0) {
+    value.setMilliseconds(0);
+    return value;
+  }
   value.setMinutes(value.getMinutes() < 30 ? 30 : 60, 0, 0);
   return value;
 }
