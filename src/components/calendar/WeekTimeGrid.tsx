@@ -18,8 +18,6 @@ import { CATEGORY_META, timestampDate } from './calendar-config';
 const START_HOUR = 6;
 const END_HOUR = 23;
 const HOUR_HEIGHT = 72;
-const DAY_MIN_WIDTH = 96;
-const GUTTER_WIDTH = 64;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 const GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 
@@ -113,8 +111,7 @@ export function WeekTimeGrid(props: WeekTimeGridProps) {
   }), [weekStart]);
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, index) => START_HOUR + index);
   const halfHourSlots = Array.from({ length: (END_HOUR - START_HOUR) * 2 }, (_, index) => index);
-  const gridTemplateColumns = `${GUTTER_WIDTH}px repeat(7, minmax(${DAY_MIN_WIDTH}px, 1fr))`;
-  const minimumWidth = GUTTER_WIDTH + DAY_MIN_WIDTH * 7;
+  const gridTemplateColumns = 'clamp(44px, 12vw, 64px) repeat(7, minmax(0, 1fr))';
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
@@ -124,34 +121,23 @@ export function WeekTimeGrid(props: WeekTimeGridProps) {
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
-    const selectedIndex = Math.max(0, days.findIndex((day) => isSameDay(day, props.selectedDate)));
-    const selectedHeader = container.querySelector<HTMLElement>(`[data-week-day="${selectedIndex}"]`);
-    let horizontalFrame = 0;
-    if (selectedHeader && container.clientWidth < minimumWidth) {
-      const targetLeft = Math.max(0, selectedHeader.offsetLeft - GUTTER_WIDTH - 20);
-      horizontalFrame = window.requestAnimationFrame(() => {
-        container.scrollLeft = targetLeft;
-      });
-    }
-
     const currentTime = new Date();
     const targetHour = isSameWeek(currentTime, weekStart, { weekStartsOn: 1 })
       ? Math.max(START_HOUR, Math.min(END_HOUR - 1, currentTime.getHours()))
       : 8;
     container.scrollTop = Math.max(0, (targetHour - START_HOUR) * HOUR_HEIGHT - 90);
-    return () => window.cancelAnimationFrame(horizontalFrame);
-  }, [days, minimumWidth, props.selectedDate, weekStart]);
+  }, [weekStart]);
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500 sm:px-5">
         <p className="font-semibold">Vista semanal por horas</p>
         <p className="hidden text-right sm:block">Toca un espacio libre para programar una actividad.</p>
-        <p className="text-right sm:hidden">Desliza para ver la semana →</p>
+        <p className="text-right sm:hidden">Lunes a domingo</p>
       </div>
 
-      <div ref={scrollRef} className="relative max-h-[72vh] overflow-auto overscroll-contain scroll-smooth">
-        <div style={{ minWidth: minimumWidth }}>
+      <div ref={scrollRef} className="relative max-h-[72vh] overflow-x-hidden overflow-y-auto overscroll-contain scroll-smooth">
+        <div className="min-w-0">
           <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
             <div className="grid" style={{ gridTemplateColumns }}>
               <div className="sticky left-0 z-50 border-r border-slate-100 bg-white" />
@@ -163,37 +149,15 @@ export function WeekTimeGrid(props: WeekTimeGridProps) {
                     type="button"
                     data-week-day={index}
                     onClick={() => props.onSelectDate(day)}
-                    className={`border-r border-slate-100 px-2 py-3 text-center transition last:border-r-0 ${selected ? 'bg-blue-50/80' : 'hover:bg-slate-50'}`}
+                    className={`min-w-0 border-r border-slate-100 px-0.5 py-2.5 text-center transition last:border-r-0 sm:px-2 sm:py-3 ${selected ? 'bg-blue-50/80' : 'hover:bg-slate-50'}`}
                   >
-                    <span className={`block text-[10px] font-black uppercase tracking-[0.14em] ${isToday(day) ? 'text-primary' : 'text-slate-400'}`}>
+                    <span className={`block truncate text-[8px] font-black uppercase tracking-normal sm:text-[10px] sm:tracking-[0.14em] ${isToday(day) ? 'text-primary' : 'text-slate-400'}`}>
                       {format(day, 'EEE', { locale: es })}
                     </span>
-                    <span className={`mx-auto mt-1.5 flex h-9 w-9 items-center justify-center rounded-full text-sm font-black ${isToday(day) ? 'bg-primary text-white shadow-md shadow-blue-200' : selected ? 'bg-white text-primary ring-2 ring-primary/20' : 'text-slate-800'}`}>
+                    <span className={`mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-black sm:mt-1.5 sm:h-9 sm:w-9 sm:text-sm ${isToday(day) ? 'bg-primary text-white shadow-md shadow-blue-200' : selected ? 'bg-white text-primary ring-2 ring-primary/20' : 'text-slate-800'}`}>
                       {format(day, 'd')}
                     </span>
                   </button>
-                );
-              })}
-            </div>
-
-            <div className="grid min-h-12 border-t border-slate-100" style={{ gridTemplateColumns }}>
-              <div className="sticky left-0 z-50 flex items-center justify-end border-r border-slate-100 bg-white px-2 text-[9px] font-black uppercase tracking-wide text-slate-400">
-                Todo el día
-              </div>
-              {days.map((day) => {
-                const allDay = props.activities.filter((activity) => activity.todoElDia && isSameDay(timestampDate(activity.inicio), day));
-                return (
-                  <div key={day.toISOString()} className="min-w-0 space-y-1 border-r border-slate-100 p-1.5 last:border-r-0">
-                    {allDay.slice(0, 2).map((activity) => {
-                      const category = CATEGORY_META[activity.categoria];
-                      return (
-                        <button key={activity.id} type="button" onClick={() => props.onOpen(activity)} className={`block w-full truncate rounded-lg border px-2 py-1 text-left text-[10px] font-bold ${category.card} ${activity.estado === 'cancelada' ? 'line-through opacity-60' : ''}`}>
-                          {activity.titulo}
-                        </button>
-                      );
-                    })}
-                    {allDay.length > 2 && <p className="px-1 text-[9px] font-bold text-slate-400">+{allDay.length - 2} más</p>}
-                  </div>
                 );
               })}
             </div>
@@ -202,7 +166,7 @@ export function WeekTimeGrid(props: WeekTimeGridProps) {
           <div className="grid" style={{ gridTemplateColumns, height: GRID_HEIGHT }}>
             <div className="sticky left-0 z-30 border-r border-slate-200 bg-white">
               {hours.map((hour) => (
-                <span key={hour} className="absolute right-2 -translate-y-1/2 whitespace-nowrap text-[10px] font-semibold text-slate-400 sm:text-[11px]" style={{ top: (hour - START_HOUR) * HOUR_HEIGHT }}>
+                <span key={hour} className="absolute right-1 -translate-y-1/2 whitespace-nowrap text-[8px] font-semibold text-slate-400 sm:right-2 sm:text-[11px]" style={{ top: (hour - START_HOUR) * HOUR_HEIGHT }}>
                   {hourLabel(hour)}
                 </span>
               ))}
@@ -257,7 +221,7 @@ export function WeekTimeGrid(props: WeekTimeGridProps) {
                         key={activity.id}
                         type="button"
                         onClick={() => props.onOpen(activity)}
-                        className={`absolute z-20 overflow-hidden rounded-lg border px-1.5 py-1 text-left shadow-sm transition hover:z-30 hover:shadow-md ${category.card} ${activity.estado === 'cancelada' ? 'opacity-60' : ''}`}
+                        className={`absolute z-20 overflow-hidden rounded-md border px-0.5 py-1 text-left shadow-sm transition hover:z-30 hover:shadow-md sm:rounded-lg sm:px-1.5 ${category.card} ${activity.estado === 'cancelada' ? 'opacity-60' : ''}`}
                         style={{
                           top: top + 1,
                           height,
@@ -266,10 +230,10 @@ export function WeekTimeGrid(props: WeekTimeGridProps) {
                         }}
                         title={`${activity.titulo} · ${format(start, 'HH:mm')}–${format(end, 'HH:mm')}`}
                       >
-                        <p className={`truncate text-[10px] font-black leading-tight sm:text-[11px] ${activity.estado === 'cancelada' ? 'line-through' : ''}`}>{activity.titulo}</p>
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-[9px] font-semibold opacity-75"><Clock3 size={9} />{format(start, 'HH:mm')}–{format(end, 'HH:mm')}</p>
-                        {height >= 58 && <p className="mt-1 flex items-center gap-1 truncate text-[9px] opacity-70"><UserRound size={9} />{activity.responsableNombre}</p>}
-                        {height >= 82 && activity.ubicacion && <p className="mt-1 flex items-center gap-1 truncate text-[9px] opacity-70"><MapPin size={9} />{activity.ubicacion}</p>}
+                        <p className={`truncate text-[8px] font-black leading-tight sm:text-[11px] ${activity.estado === 'cancelada' ? 'line-through' : ''}`}>{activity.titulo}</p>
+                        <p className="mt-0.5 truncate text-[7px] font-semibold leading-tight opacity-75 sm:flex sm:items-center sm:gap-1 sm:text-[9px]"><Clock3 size={9} className="hidden shrink-0 sm:block" /><span className="sm:hidden">{format(start, 'HH:mm')}</span><span className="hidden sm:inline">{format(start, 'HH:mm')}–{format(end, 'HH:mm')}</span></p>
+                        {height >= 58 && <p className="mt-1 hidden items-center gap-1 truncate text-[9px] opacity-70 sm:flex"><UserRound size={9} />{activity.responsableNombre}</p>}
+                        {height >= 82 && activity.ubicacion && <p className="mt-1 hidden items-center gap-1 truncate text-[9px] opacity-70 sm:flex"><MapPin size={9} />{activity.ubicacion}</p>}
                       </button>
                     );
                   })}
