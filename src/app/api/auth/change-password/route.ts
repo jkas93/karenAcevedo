@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
+import { SUPERUSER_EMAIL } from '@/lib/access-control';
 import {
   ApiError,
   apiErrorResponse,
   readJsonBody,
-  requireAdmin,
+  requirePermission,
 } from '@/lib/server/admin-auth';
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    const session = await requirePermission(request, 'users.manage');
     const body = await readJsonBody(request);
     const uid = typeof body.uid === 'string' ? body.uid.trim() : '';
     const userEmail =
@@ -24,7 +25,12 @@ export async function POST(request: Request) {
     }
 
     const { adminAuth } = getAdminServices();
-    const targetUid = uid || (await adminAuth.getUserByEmail(userEmail)).uid;
+    const targetUser = uid ? await adminAuth.getUser(uid) : await adminAuth.getUserByEmail(userEmail);
+    const targetEmail = targetUser.email?.trim().toLowerCase();
+    if (targetEmail === SUPERUSER_EMAIL && session.email !== SUPERUSER_EMAIL) {
+      throw new ApiError(403, 'Solo el propio Modo Dios puede cambiar su contrasena.');
+    }
+    const targetUid = targetUser.uid;
     await adminAuth.updateUser(targetUid, { password: newPassword });
 
     return NextResponse.json({

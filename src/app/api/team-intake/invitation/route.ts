@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
-import { ApiError, apiErrorResponse, readJsonBody, requireAdmin } from '@/lib/server/admin-auth';
+import { ApiError, apiErrorResponse, readJsonBody, requirePermission } from '@/lib/server/admin-auth';
 import { hashValue, TEAM_INTAKE_CONFIG_PATH } from '@/lib/server/team-intake';
 
 export const runtime = 'nodejs';
@@ -24,9 +24,9 @@ function responseData(data: FirebaseFirestore.DocumentData, activeOverride?: boo
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAdmin(request);
     const body = await readJsonBody(request);
     const action = typeof body.action === 'string' ? body.action : 'get';
+    const session = await requirePermission(request, 'teamProfiles.manage');
     const { adminDb } = getAdminServices();
     const configRef = adminDb.doc(TEAM_INTAKE_CONFIG_PATH);
     const current = await configRef.get();

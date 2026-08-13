@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { voluntariosService } from "@/lib/firebase/voluntarios-service";
 import type { Voluntario } from "@/lib/firebase/types";
 import { Download, Search, Users, Loader2, PhoneCall, Clock } from "lucide-react";
+import { useAccess } from '@/components/access/AccessContext';
 
 export default function DashboardPage() {
+  const { hasPermission } = useAccess();
+  const canManage = hasPermission('volunteers.manage');
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +52,7 @@ export default function DashboardPage() {
   // ─── Helpers de render ────────────────────────────────────────────────────
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    if (!canManage) return;
     try {
       await voluntariosService.actualizarEstado(id, newStatus);
     } catch (error) {
@@ -82,6 +86,7 @@ export default function DashboardPage() {
   };
 
   const exportToCSV = () => {
+    if (!canManage) return;
     voluntariosService.exportarCSV(
       filteredVoluntarios,
       `voluntarios_fuerza_ciudadana_${new Date().toLocaleDateString('es-PE').replace(/\//g, '-')}.csv`
@@ -101,7 +106,8 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={exportToCSV}
-          className="flex items-center gap-2 bg-secondary text-dark font-bold px-5 py-2.5 rounded-xl hover:bg-yellow-400 transition-all shadow-sm"
+          disabled={!canManage}
+          className="flex items-center gap-2 bg-secondary text-dark font-bold px-5 py-2.5 rounded-xl hover:bg-yellow-400 transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download size={18} /> Exportar CSV
         </button>
@@ -217,6 +223,7 @@ export default function DashboardPage() {
                     <td className="p-4">
                       <select
                         value={v.estado || 'pendiente'}
+                        disabled={!canManage}
                         onChange={(e) => handleStatusChange(v.id, e.target.value)}
                         className={`text-xs font-bold px-3 py-1.5 rounded-full border outline-none cursor-pointer appearance-none ${getStatusColor(v.estado)}`}
                       >

@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Save, Loader2, Phone, Mail, Database, RefreshCw, Trash2, FileSpreadsheet, Clipboard, X, Check, AlertTriangle, AlertCircle } from "lucide-react";
 import { useElectoral } from "@/lib/firebase/ElectoralContext";
 import { seedColegiosChaclacayo, limpiarBaseElectoral, importarBaseElectoralPersonalizada, FilaImportacionElectoral } from "@/lib/firebase/seed-chaclacayo";
+import { useAccess } from '@/components/access/AccessContext';
 
 type RawRow = Record<string, unknown>;
 
@@ -14,6 +15,9 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function ConfiguracionPage() {
+  const { hasPermission } = useAccess();
+  const canManageSettings = hasPermission('settings.manage');
+  const canManageElectoral = hasPermission('electoral.manage');
   const [whatsapp, setWhatsapp] = useState("");
   const [correo, setCorreo] = useState("");
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -65,6 +69,7 @@ export default function ConfiguracionPage() {
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageSettings) return;
     setSaving(true);
     setMessage({ text: "", type: "" });
 
@@ -86,6 +91,7 @@ export default function ConfiguracionPage() {
   };
 
   const handleSeedDatabase = async () => {
+    if (!canManageElectoral) return;
     if (locales.length > 0) {
       const confirm = window.confirm(
         "⚠️ ¡Atención! Al inicializar se borrarán todos los locales, mesas y asignaciones de personeros actuales para volver a cargarlos de cero. ¿Estás seguro de continuar?"
@@ -110,6 +116,7 @@ export default function ConfiguracionPage() {
   };
 
   const handleClearDatabase = async () => {
+    if (!canManageElectoral) return;
     const confirm = window.confirm(
       "⚠️ ¿Estás completamente seguro de borrar todos los locales, mesas, actas y asignaciones? Esta acción no se puede deshacer."
     );
@@ -199,6 +206,7 @@ export default function ConfiguracionPage() {
 
   // Procesar archivo Excel
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canManageElectoral) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -256,6 +264,7 @@ export default function ConfiguracionPage() {
 
   // Ejecutar la importación masiva final a Firestore
   const executeMassImport = async () => {
+    if (!canManageElectoral) return;
     if (parsedData.length === 0) return;
 
     const confirm = window.confirm(
@@ -335,6 +344,7 @@ export default function ConfiguracionPage() {
                     <input
                       type="text"
                       required
+                      disabled={!canManageSettings}
                       value={whatsapp}
                       onChange={(e) => setWhatsapp(e.target.value.replace(/[^0-9]/g, ""))}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
@@ -354,6 +364,7 @@ export default function ConfiguracionPage() {
                     <input
                       type="email"
                       required
+                      disabled={!canManageSettings}
                       value={correo}
                       onChange={(e) => setCorreo(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all"
@@ -364,7 +375,7 @@ export default function ConfiguracionPage() {
 
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || !canManageSettings}
                   className="w-full flex items-center justify-center gap-2 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-dark transition-all shadow-sm cursor-pointer"
                 >
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
@@ -429,6 +440,7 @@ export default function ConfiguracionPage() {
                 {/* Botón Importación Avanzada */}
                 <button
                   type="button"
+                  disabled={!canManageElectoral}
                   onClick={() => {
                     setImportError("");
                     setParsedData([]);
@@ -443,7 +455,7 @@ export default function ConfiguracionPage() {
 
                 <button
                   type="button"
-                  disabled={loadingDbAction}
+                  disabled={loadingDbAction || !canManageElectoral}
                   onClick={handleSeedDatabase}
                   className="w-full flex items-center justify-center gap-2 bg-dark text-white font-bold py-2.5 rounded-xl hover:bg-black transition-all disabled:opacity-50 text-sm cursor-pointer"
                 >
@@ -454,7 +466,7 @@ export default function ConfiguracionPage() {
                 {locales.length > 0 && (
                   <button
                     type="button"
-                    disabled={loadingDbAction}
+                    disabled={loadingDbAction || !canManageElectoral}
                     onClick={handleClearDatabase}
                     className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 font-bold py-2.5 rounded-xl hover:bg-red-50 transition-all disabled:opacity-50 text-sm cursor-pointer"
                   >
@@ -470,7 +482,7 @@ export default function ConfiguracionPage() {
       </div>
 
       {/* Modal: Carga Avanzada */}
-      {showImportModal && (
+      {canManageElectoral && showImportModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-title">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
             

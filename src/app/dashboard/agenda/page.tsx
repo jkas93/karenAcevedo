@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import { agendaService } from "@/lib/firebase/agenda-service";
 import type { ActividadAgenda } from "@/lib/firebase/types";
 import { Plus, Edit2, Trash2, Calendar, MapPin, Loader2, X } from "lucide-react";
+import { useAccess } from '@/components/access/AccessContext';
 
 export default function AgendaPage() {
+  const { hasPermission } = useAccess();
+  const canManage = hasPermission('agenda.manage');
   const [actividades, setActividades] = useState<ActividadAgenda[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -35,6 +38,7 @@ export default function AgendaPage() {
   }, []);
 
   const handleOpenModal = (actividad?: ActividadAgenda) => {
+    if (!canManage) return;
     if (actividad) {
       setEditingId(actividad.id);
       setFormData({
@@ -64,6 +68,7 @@ export default function AgendaPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManage) return;
     setIsSaving(true);
     try {
       if (editingId) {
@@ -80,6 +85,7 @@ export default function AgendaPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canManage) return;
     if (window.confirm("¿Estás seguro de eliminar esta actividad?")) {
       try {
         await agendaService.eliminarActividad(id);
@@ -98,13 +104,13 @@ export default function AgendaPage() {
             Administra los eventos públicos que aparecerán en la sección &quot;Movimiento&quot;.
           </p>
         </div>
-        <button
+        {canManage ? <button
           onClick={() => handleOpenModal()}
           className="flex items-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-xl hover:bg-primary-dark transition-all shadow-sm"
         >
           <Plus size={18} />
           Nueva Actividad
-        </button>
+        </button> : <span className="rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-500">Acceso de lectura</span>}
       </header>
 
       {/* Lista de Actividades */}
@@ -135,7 +141,7 @@ export default function AgendaPage() {
                     <span>{act.ubicacion}</span>
                   </div>
                 </div>
-                <div className="flex gap-2 items-start opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                {canManage && <div className="flex gap-2 items-start opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button 
                     onClick={() => handleOpenModal(act)}
                     className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
@@ -150,7 +156,7 @@ export default function AgendaPage() {
                   >
                     <Trash2 size={18} />
                   </button>
-                </div>
+                </div>}
               </div>
             ))}
           </div>
@@ -158,7 +164,7 @@ export default function AgendaPage() {
       </div>
 
       {/* Modal Formulario */}
-      {isModalOpen && (
+      {canManage && isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-6 border-b border-gray-100">

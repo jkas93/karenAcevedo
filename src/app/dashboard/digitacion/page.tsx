@@ -7,8 +7,11 @@ import { PARTIDOS_CHACLACAYO } from '@/lib/firebase/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Camera, Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { useAccess } from '@/components/access/AccessContext';
 
 export default function DigitacionCentralPage() {
+  const { hasPermission } = useAccess();
+  const canManage = hasPermission('actas.manage');
   const { locales, mesas, loading: globalLoading } = useElectoral();
   
   const [localSeleccionado, setLocalSeleccionado] = useState<string>('');
@@ -117,6 +120,7 @@ export default function DigitacionCentralPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManage) return;
     if (!localSeleccionado || !mesaSeleccionada) {
       setError('Debes seleccionar un Local y una Mesa.');
       return;
@@ -189,7 +193,9 @@ export default function DigitacionCentralPage() {
         <p className="text-slate-500">Módulo de Centro de Cómputo. Selecciona el local, la mesa e ingresa los resultados.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      {!canManage && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">Tu rol tiene acceso de lectura. El formulario de ingreso permanece deshabilitado.</div>}
+
+      <fieldset disabled={!canManage} className={`grid grid-cols-1 md:grid-cols-12 gap-6 ${!canManage ? 'opacity-60' : ''}`}>
         
         {/* COLUMNA IZQUIERDA: Formulario de Selección y Resultados */}
         <div className="md:col-span-7 space-y-6">
@@ -387,7 +393,7 @@ export default function DigitacionCentralPage() {
           </Card>
         </div>
 
-      </div>
+      </fieldset>
     </div>
   );
 }

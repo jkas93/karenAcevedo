@@ -40,7 +40,7 @@ export function ElectoralProvider({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const privileged = role === 'administrador' || role === 'candidata';
+    const privileged = role === 'superusuario' || role === 'administrador' || role === 'candidata';
     const expectedSubscriptions = privileged ? 4 : 2;
     const loadedSubscriptions = new Set<string>();
     const unsubscribers: Array<() => void> = [];

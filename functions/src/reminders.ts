@@ -73,7 +73,7 @@ const DAY_MS = 24 * HOUR_MS;
 const DUE_WINDOW_MS = 30 * MINUTE_MS;
 const CLAIM_LEASE_MS = 15 * MINUTE_MS;
 const RECEIPT_RETENTION_MS = 45 * DAY_MS;
-const MANAGER_ROLES = new Set(['administrador', 'candidata']);
+const MANAGER_ROLES = new Set(['superusuario', 'administrador', 'candidata']);
 
 function formatActivityDate(date: Date) {
   return new Intl.DateTimeFormat('es-PE', {

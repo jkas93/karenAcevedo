@@ -18,20 +18,40 @@ service cloud.firestore {
       return get(profilePath()).data.rol;
     }
 
-    function isAdmin() {
-      return hasProfile() && role() == 'administrador';
+    function isSuperuser() {
+      return isAuthenticated()
+        && request.auth.token.email == '71260540@fuerzaciudadana.pe';
     }
 
-    function isCandidate() {
-      return hasProfile() && role() == 'candidata';
+    function permissionPath() {
+      return /databases/$(database)/documents/rolePermissions/$(role());
     }
 
-    function isDigitizer() {
-      return hasProfile() && role() == 'digitador';
+    function fallbackPermission(permission) {
+      return role() == 'administrador' && permission in [
+          'calendar.view', 'calendar.manage', 'volunteers.view', 'volunteers.manage',
+          'agenda.view', 'agenda.manage', 'electoral.view', 'electoral.manage',
+          'actas.view', 'actas.manage', 'teamProfiles.view', 'teamProfiles.manage',
+          'settings.view', 'settings.manage', 'users.view', 'users.manage'
+        ]
+        || role() == 'candidata' && permission in [
+          'calendar.view', 'calendar.manage', 'volunteers.view', 'volunteers.manage',
+          'agenda.view', 'agenda.manage', 'electoral.view'
+        ]
+        || role() == 'digitador' && permission in [
+          'calendar.view', 'actas.view', 'actas.manage'
+        ]
+        || role() == 'usuario' && permission in [
+          'calendar.view', 'volunteers.view', 'volunteers.manage'
+        ];
     }
 
-    function isVolunteerTeam() {
-      return hasProfile() && role() in ['administrador', 'candidata', 'usuario'];
+    function hasPermission(permission) {
+      return isSuperuser()
+        || (hasProfile()
+          && (exists(permissionPath())
+            ? get(permissionPath()).data.permissions[permission] == true
+            : fallbackPermission(permission)));
     }
 
     function isSelf(userId) {
@@ -136,47 +156,50 @@ service cloud.firestore {
 
     match /voluntarios/{docId} {
       allow create: if false;
-      allow read: if isVolunteerTeam();
-      allow update: if isVolunteerTeam()
+      allow read: if hasPermission('volunteers.view');
+      allow update: if hasPermission('volunteers.manage')
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
         && request.resource.data.estado in ['pendiente', 'contactado', 'rechazado'];
-      allow delete: if isAdmin();
+      allow delete: if hasPermission('volunteers.manage');
     }
 
     match /usuarios/{userId} {
-      allow get: if isSelf(userId) || isAdmin() || isCandidate();
-      allow list: if isAdmin() || isCandidate();
+      allow get: if isSelf(userId) || hasPermission('users.view')
+        || hasPermission('calendar.manage') || hasPermission('electoral.manage');
+      allow list: if hasPermission('users.view')
+        || hasPermission('calendar.manage') || hasPermission('electoral.manage');
       allow create, update, delete: if false;
     }
 
     match /locales/{docId} {
-      allow read: if hasProfile();
-      allow update: if isAdmin();
+      allow read: if hasPermission('electoral.view') || hasPermission('actas.view')
+        || hasPermission('settings.view');
+      allow update: if hasPermission('electoral.manage');
       allow create, delete: if false;
     }
 
     match /mesas/{docId} {
-      allow read: if hasProfile();
+      allow read: if hasPermission('electoral.view') || hasPermission('actas.view')
+        || hasPermission('settings.view');
       allow create, delete: if false;
-      allow update: if isAdmin()
-        || (isDigitizer()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
-          && resource.data.estado == 'pendiente'
-          && request.resource.data.estado == 'enviada');
+      allow update: if (hasPermission('electoral.manage') || hasPermission('actas.manage'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+        && resource.data.estado == 'pendiente'
+        && request.resource.data.estado == 'enviada';
     }
 
     match /actas/{docId} {
-      allow read: if isAdmin() || isCandidate();
-      allow create: if (isAdmin() || isDigitizer())
+      allow read: if hasPermission('electoral.view') || hasPermission('actas.view');
+      allow create: if hasPermission('actas.manage')
         && !exists(/databases/$(database)/documents/actas/$(docId))
         && validActa(docId);
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if hasPermission('electoral.manage');
     }
 
     match /config/{docId} {
-      allow read: if hasProfile();
-      allow create, update: if isAdmin()
+      allow read: if hasPermission('settings.view');
+      allow create, update: if hasPermission('settings.manage')
         && request.resource.data.keys().hasAll(['whatsapp', 'correo'])
         && request.resource.data.keys().hasOnly(['whatsapp', 'correo'])
         && request.resource.data.whatsapp is string
@@ -189,18 +212,18 @@ service cloud.firestore {
 
     match /agenda/{docId} {
       allow read: if true;
-      allow create, update: if (isAdmin() || isCandidate()) && validAgenda();
-      allow delete: if isAdmin() || isCandidate();
+      allow create, update: if hasPermission('agenda.manage') && validAgenda();
+      allow delete: if hasPermission('agenda.manage');
     }
 
     match /calendario_actividades/{docId} {
-      allow read: if hasProfile();
-      allow create: if (isAdmin() || isCandidate())
+      allow read: if hasPermission('calendar.view');
+      allow create: if hasPermission('calendar.manage')
         && request.resource.data.creadoPor == request.auth.token.email
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
         && validCalendarActivity();
-      allow update: if (isAdmin() || isCandidate())
+      allow update: if hasPermission('calendar.manage')
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'titulo', 'descripcion', 'inicio', 'fin', 'todoElDia', 'ubicacion',
           'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado',
@@ -208,7 +231,15 @@ service cloud.firestore {
         ])
         && request.resource.data.updatedAt == request.time
         && validCalendarActivity();
-      allow delete: if isAdmin() || isCandidate();
+      allow delete: if hasPermission('calendar.manage');
+    }
+
+    match /rolePermissions/{docId} {
+      allow read, write: if false;
+    }
+
+    match /accessAudit/{docId} {
+      allow read, write: if false;
     }
 
     match /pushSubscriptions/{docId} {

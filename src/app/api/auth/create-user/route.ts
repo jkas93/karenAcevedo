@@ -1,20 +1,19 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
+import { SUPERUSER_DNI, isAssignableRole } from '@/lib/access-control';
 import {
   ApiError,
   apiErrorResponse,
   readJsonBody,
-  requireAdmin,
+  requirePermission,
 } from '@/lib/server/admin-auth';
-
-const VALID_ROLES = new Set(['administrador', 'candidata', 'digitador', 'usuario']);
 
 export async function POST(request: Request) {
   let createdUid: string | null = null;
 
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'users.manage');
     const body = await readJsonBody(request);
     const nombre = typeof body.nombre === 'string' ? body.nombre.trim() : '';
     const dni = typeof body.dni === 'string' ? body.dni.trim() : '';
@@ -28,10 +27,13 @@ export async function POST(request: Request) {
     if (!/^\d{8}$/.test(dni)) {
       throw new ApiError(400, 'El DNI debe contener exactamente 8 digitos.');
     }
+    if (dni === SUPERUSER_DNI) {
+      throw new ApiError(409, 'La cuenta Modo Dios ya esta reservada y no puede recrearse.');
+    }
     if (password.length < 8 || password.length > 128) {
       throw new ApiError(400, 'La contrasena debe tener entre 8 y 128 caracteres.');
     }
-    if (!VALID_ROLES.has(rol)) {
+    if (!isAssignableRole(rol)) {
       throw new ApiError(400, 'El rol seleccionado no es valido.');
     }
     if (telefono && !/^\d{9,15}$/.test(telefono)) {

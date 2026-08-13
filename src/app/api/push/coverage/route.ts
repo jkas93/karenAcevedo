@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
-import { apiErrorResponse, requireAdmin } from '@/lib/server/admin-auth';
+import { apiErrorResponse, requirePermission } from '@/lib/server/admin-auth';
+import { SUPERUSER_EMAIL, isUserRole } from '@/lib/access-control';
 
 export const runtime = 'nodejs';
-
-const AUTHORIZED_ROLES = new Set([
-  'administrador',
-  'candidata',
-  'digitador',
-  'usuario',
-]);
 
 function isValidSubscription(data: FirebaseFirestore.DocumentData) {
   return (
@@ -25,7 +19,7 @@ function isValidSubscription(data: FirebaseFirestore.DocumentData) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    await requirePermission(request, 'users.view');
     const { adminDb } = getAdminServices();
     const [usersSnapshot, subscriptionsSnapshot] = await Promise.all([
       adminDb.collection('usuarios').get(),
@@ -34,9 +28,11 @@ export async function POST(request: Request) {
 
     const authorizedEmails = new Set(
       usersSnapshot.docs
-        .filter((userDoc) =>
-          AUTHORIZED_ROLES.has(String(userDoc.data().rol || '')),
-        )
+        .filter((userDoc) => {
+          const role = userDoc.data().rol;
+          return isUserRole(role)
+            && (role !== 'superusuario' || userDoc.id.toLowerCase() === SUPERUSER_EMAIL);
+        })
         .map((userDoc) => userDoc.id.trim().toLowerCase()),
     );
     const validSubscriptions = subscriptionsSnapshot.docs.filter(

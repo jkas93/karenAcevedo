@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     }
 
     const ownerUid = subscription.data()?.uid;
-    if (ownerUid !== session.token.uid && session.role !== 'administrador') {
+    if (ownerUid !== session.token.uid && !session.permissions['users.manage']) {
       throw new ApiError(403, 'No puedes retirar la suscripcion de otro usuario.');
     }
 

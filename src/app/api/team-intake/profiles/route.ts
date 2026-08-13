@@ -1,7 +1,7 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
-import { ApiError, apiErrorResponse, readJsonBody, requireAdmin } from '@/lib/server/admin-auth';
+import { ApiError, apiErrorResponse, readJsonBody, requirePermission } from '@/lib/server/admin-auth';
 import { TEAM_PROFILE_STATUSES } from '@/lib/team-intake-types';
 
 export const runtime = 'nodejs';
@@ -20,9 +20,12 @@ function serialize(value: unknown): unknown {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAdmin(request);
     const body = await readJsonBody(request);
     const action = typeof body.action === 'string' ? body.action : 'list';
+    const session = await requirePermission(
+      request,
+      action === 'list' ? 'teamProfiles.view' : 'teamProfiles.manage',
+    );
     const { adminDb } = getAdminServices();
 
     if (action === 'list') {

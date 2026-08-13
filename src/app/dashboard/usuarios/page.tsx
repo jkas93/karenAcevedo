@@ -1,448 +1,206 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { Loader2, UserPlus, Shield, Key, Trash2 } from "lucide-react";
-import { userService } from "@/lib/firebase/user-service";
-import type { RolUsuario } from "@/lib/firebase/types";
-import { authenticatedPost } from "@/lib/firebase/authenticated-request";
+import { useEffect, useState } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { Key, Loader2, LockKeyhole, Shield, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { authenticatedPost } from '@/lib/firebase/authenticated-request';
+import { userService } from '@/lib/firebase/user-service';
+import {
+  ASSIGNABLE_ROLES,
+  ROLE_LABELS,
+  SUPERUSER_EMAIL,
+  type AssignableRole,
+  type UserRole,
+} from '@/lib/access-control';
+import { RolePermissionsPanel } from '@/components/access/RolePermissionsPanel';
+import { useAccess } from '@/components/access/AccessContext';
 
 type UsuarioPanel = {
   id: string;
   uid?: string;
   nombre: string;
   dni: string;
-  rol: RolUsuario;
+  rol: UserRole;
+  protected?: boolean;
 };
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Ocurrió un error inesperado.";
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Ocurrió un error inesperado.';
 }
 
+const roleStyles: Record<UserRole, string> = {
+  superusuario: 'border-amber-300 bg-amber-50 text-amber-900',
+  administrador: 'border-red-200 bg-red-50 text-red-700',
+  candidata: 'border-purple-200 bg-purple-50 text-purple-700',
+  digitador: 'border-blue-200 bg-blue-50 text-blue-700',
+  usuario: 'border-slate-200 bg-slate-50 text-slate-700',
+};
+
 export default function UsuariosPage() {
+  const { email, hasPermission, isSuperuser } = useAccess();
+  const canManage = hasPermission('users.manage');
   const [usuarios, setUsuarios] = useState<UsuarioPanel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" });
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  
-  // Modal de contraseña
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [passwordUser, setPasswordUser] = useState<UsuarioPanel | null>(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
-
-  // Modal de eliminación
   const [deletingUser, setDeletingUser] = useState<UsuarioPanel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const [formData, setFormData] = useState({
-    dni: "",
-    nombre: "",
-    rol: "usuario" as RolUsuario,
-    password: "",
-  });
+  const [formData, setFormData] = useState({ dni: '', nombre: '', rol: 'usuario' as AssignableRole, password: '' });
 
   const fetchUsuarios = async () => {
-    const querySnapshot = await getDocs(collection(db, "usuarios"));
-    const list = querySnapshot.docs.map((document) => ({
-      id: document.id,
-      ...document.data(),
-    })) as UsuarioPanel[];
+    const snapshot = await getDocs(collection(db, 'usuarios'));
+    const list = snapshot.docs.map((document) => {
+      const data = document.data() as Omit<UsuarioPanel, 'id'>;
+      return {
+        ...data,
+        id: document.id,
+        rol: document.id.toLowerCase() === SUPERUSER_EMAIL ? 'superusuario' : data.rol,
+        protected: document.id.toLowerCase() === SUPERUSER_EMAIL || data.rol === 'superusuario' || data.protected,
+      } as UsuarioPanel;
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     setUsuarios(list);
   };
 
   useEffect(() => {
-    const loadUsuarios = async () => {
-      try {
-        await fetchUsuarios();
-      } catch (error) {
-        console.error("Error inicializando:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadUsuarios();
+    const timer = window.setTimeout(() => {
+      fetchUsuarios()
+        .catch((error) => setMessage({ text: getErrorMessage(error), error: true }))
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage({ text: "", type: "" });
-
+  const handleCreateUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canManage) return;
     if (formData.password.length < 8) {
-      setMessage({ text: "La contraseña debe tener al menos 8 caracteres.", type: "error" });
-      setSaving(false);
+      setMessage({ text: 'La contraseña debe tener al menos 8 caracteres.', error: true });
       return;
     }
-
+    setSaving(true);
+    setMessage(null);
     try {
-      // Usa el servicio unificado — esquema consistente en Firestore para todos los roles
-      await userService.crearUsuario({
-        nombre: formData.nombre,
-        dni: formData.dni,
-        contrasena: formData.password,
-        rol: formData.rol,
-      });
-
-      setMessage({
-        text: `✅ Usuario "${formData.nombre}" creado correctamente con rol ${formData.rol}.`,
-        type: "success",
-      });
-      setFormData({ dni: "", nombre: "", rol: "usuario", password: "" });
+      await userService.crearUsuario({ nombre: formData.nombre, dni: formData.dni, contrasena: formData.password, rol: formData.rol });
+      setFormData({ dni: '', nombre: '', rol: 'usuario', password: '' });
+      setMessage({ text: 'Usuario creado correctamente.', error: false });
       await fetchUsuarios();
-    } catch (error: unknown) {
-      console.error("Error creando usuario:", error);
-      setMessage({ text: `❌ ${getErrorMessage(error)}`, type: "error" });
+    } catch (error) {
+      setMessage({ text: getErrorMessage(error), error: true });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleChangeRole = async (userId: string, newRole: RolUsuario) => {
-    setUpdatingId(userId);
+  const handleChangeRole = async (user: UsuarioPanel, newRole: AssignableRole) => {
+    if (!canManage || user.protected || user.id === email) return;
+    setUpdatingId(user.id);
+    setMessage(null);
     try {
-      await authenticatedPost<{ success: true }>('/api/auth/update-role', {
-        userEmail: userId,
-        newRole,
-      });
-      setMessage({ text: "Rol actualizado correctamente.", type: "success" });
+      await authenticatedPost('/api/auth/update-role', { userEmail: user.id, newRole });
+      setMessage({ text: `Rol de ${user.nombre} actualizado.`, error: false });
       await fetchUsuarios();
-      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
     } catch (error) {
-      console.error("Error al actualizar rol:", error);
-      setMessage({ text: "Error al actualizar el rol.", type: "error" });
+      setMessage({ text: getErrorMessage(error), error: true });
     } finally {
       setUpdatingId(null);
     }
   };
 
-  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passwordUser) return;
+  const handlePasswordChange = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!passwordUser || !canManage) return;
     if (newPassword.length < 8) {
-      alert("La contraseña debe tener al menos 8 caracteres.");
+      setMessage({ text: 'La contraseña debe tener al menos 8 caracteres.', error: true });
       return;
     }
-
     setSavingPassword(true);
     try {
-      await authenticatedPost<{ success: true }>('/api/auth/change-password', {
-        uid: passwordUser.uid || '',
-        userEmail: passwordUser.id,
-        newPassword,
-      });
-
-      setMessage({ text: `✅ Contraseña de ${passwordUser.nombre} actualizada correctamente.`, type: "success" });
+      await authenticatedPost('/api/auth/change-password', { uid: passwordUser.uid || '', userEmail: passwordUser.id, newPassword });
       setPasswordUser(null);
-      setNewPassword("");
-    } catch (error: unknown) {
-      alert(getErrorMessage(error));
+      setNewPassword('');
+      setMessage({ text: 'Contraseña actualizada correctamente.', error: false });
+    } catch (error) {
+      setMessage({ text: getErrorMessage(error), error: true });
     } finally {
       setSavingPassword(false);
     }
   };
 
-  const handleDeleteUserConfirm = async () => {
-    if (!deletingUser) return;
-    
+  const handleDelete = async () => {
+    if (!deletingUser || !canManage || deletingUser.protected) return;
     setIsDeleting(true);
     try {
-      await authenticatedPost<{ success: true }>('/api/auth/delete-user', {
-        uid: deletingUser.uid || '',
-        userEmail: deletingUser.id,
-      });
-
-      setMessage({ text: `✅ Usuario ${deletingUser.nombre} eliminado permanentemente.`, type: "success" });
+      await authenticatedPost('/api/auth/delete-user', { uid: deletingUser.uid || '', userEmail: deletingUser.id });
       setDeletingUser(null);
+      setMessage({ text: 'Usuario eliminado correctamente.', error: false });
       await fetchUsuarios();
-    } catch (error: unknown) {
-      alert(getErrorMessage(error));
+    } catch (error) {
+      setMessage({ text: getErrorMessage(error), error: true });
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const getRoleSelect = (usr: UsuarioPanel) => {
-    return (
-      <div className="relative">
-        <select
-          value={usr.rol}
-          onChange={(e) => handleChangeRole(usr.id, e.target.value as RolUsuario)}
-          disabled={updatingId === usr.id}
-          className={`appearance-none outline-none font-bold text-xs px-3 py-1.5 rounded-full border cursor-pointer w-32 ${
-            usr.rol === 'administrador' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' :
-            usr.rol === 'candidata' ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' :
-            usr.rol === 'digitador' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
-            'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-          }`}
-        >
-          <option value="usuario">Usuario</option>
-          <option value="digitador">Digitador</option>
-          <option value="administrador">Administrador</option>
-          <option value="candidata">Candidata</option>
-        </select>
-        {updatingId === usr.id && (
-          <Loader2 size={14} className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />
-        )}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="py-20 flex justify-center">
-        <Loader2 size={40} className="animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center py-20"><Loader2 size={40} className="animate-spin text-primary" /></div>;
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <header className="mb-10">
-        <h1 className="text-3xl font-black text-dark mb-2">Gestión de Accesos</h1>
-        <p className="text-text">
-          Administra quién puede entrar al panel y qué nivel de permisos tienen.
-        </p>
+    <div className="mx-auto max-w-6xl">
+      <header className="mb-8">
+        <div className="flex items-center gap-3"><ShieldCheck className="text-primary" /><h1 className="text-3xl font-black text-dark">Gestión de Accesos</h1></div>
+        <p className="mt-2 text-text">Administra usuarios y los permisos efectivos de cada rol.</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {message && <div role="status" className={`mb-6 rounded-2xl border p-4 text-sm font-semibold ${message.error ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'}`}>{message.text}</div>}
 
-        {/* Formulario de Alta */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 sticky top-10">
-            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
-              <div className="bg-blue-50 p-2 rounded-xl text-blue-600">
-                <UserPlus size={24} />
-              </div>
-              <h2 className="text-xl font-bold text-dark">Nuevo Acceso</h2>
-            </div>
+      <div className="grid gap-8 lg:grid-cols-[340px_1fr]">
+        <section className="self-start rounded-3xl border border-gray-100 bg-white p-6 shadow-sm lg:sticky lg:top-10">
+          <div className="mb-6 flex items-center gap-3 border-b border-gray-100 pb-5"><div className="rounded-xl bg-blue-50 p-2 text-blue-600"><UserPlus size={22} /></div><h2 className="text-xl font-bold text-dark">Nuevo acceso</h2></div>
+          {!canManage && <p className="mb-5 flex gap-2 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800"><LockKeyhole size={18} className="shrink-0" />Tu rol puede consultar, pero no crear usuarios.</p>}
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <fieldset disabled={!canManage || saving} className="space-y-4 disabled:opacity-55">
+              <label className="block text-sm font-bold text-dark">Nombre completo<input required minLength={2} maxLength={100} value={formData.nombre} onChange={(event) => setFormData({ ...formData, nombre: event.target.value })} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+              <label className="block text-sm font-bold text-dark">DNI (usuario)<input required inputMode="numeric" pattern="[0-9]{8}" value={formData.dni} onChange={(event) => setFormData({ ...formData, dni: event.target.value.replace(/\D/g, '').slice(0, 8) })} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="8 dígitos" /></label>
+              <label className="block text-sm font-bold text-dark">Rol<select value={formData.rol} onChange={(event) => setFormData({ ...formData, rol: event.target.value as AssignableRole })} className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-primary">
+                {ASSIGNABLE_ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}
+              </select></label>
+              <label className="block text-sm font-bold text-dark">Contraseña temporal<input required type="password" minLength={8} maxLength={128} value={formData.password} onChange={(event) => setFormData({ ...formData, password: event.target.value })} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="Mínimo 8 caracteres" /></label>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-dark px-4 py-3 font-bold text-white transition hover:bg-black disabled:opacity-60">{saving ? <Loader2 size={20} className="animate-spin" /> : <UserPlus size={18} />} Crear usuario</button>
+            </fieldset>
+          </form>
+        </section>
 
-            <form onSubmit={handleCreateUser} className="space-y-5">
-              {message.text && (
-                <div
-                  className={`p-4 rounded-xl text-sm font-medium ${
-                    message.type === "success"
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-red-50 text-red-700 border border-red-200"
-                  }`}
-                >
-                  {message.text}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-bold text-dark mb-1">Nombre Completo</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                  placeholder="Ej. Juan Pérez"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-dark mb-1">DNI (Usuario)</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.dni}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      dni: e.target.value.replace(/[^0-9]/g, "").slice(0, 8),
-                    })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                  placeholder="8 dígitos"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  El usuario ingresará con su DNI como contraseña de usuario.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-dark mb-1">Rol de Acceso</label>
-                <select
-                  required
-                  value={formData.rol}
-                  onChange={(e) =>
-                    setFormData({ ...formData, rol: e.target.value as RolUsuario })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-                >
-                  <option value="usuario">Usuario — Solo ver voluntarios</option>
-                  <option value="digitador">Digitador — Ingreso de Actas centralizado</option>
-                  <option value="administrador">Administrador — Control total</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-dark mb-1">Contraseña Temporal</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full flex items-center justify-center gap-2 bg-dark text-white font-bold py-3 px-4 rounded-xl hover:bg-black transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
-              >
-                {saving ? <Loader2 size={20} className="animate-spin" /> : "Crear Usuario"}
-              </button>
-            </form>
+        <section className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-center gap-3 border-b border-gray-100 pb-5"><div className="rounded-xl bg-purple-50 p-2 text-purple-600"><Shield size={22} /></div><div><h2 className="text-xl font-bold text-dark">Usuarios registrados</h2><p className="text-xs text-gray-500">{usuarios.length} en total</p></div></div>
+          <div className="space-y-3">
+            {usuarios.map((user) => {
+              const protectedUser = Boolean(user.protected);
+              const canChangePassword = canManage && (!protectedUser || (isSuperuser && user.id === email));
+              const canEdit = canManage && !protectedUser && user.id !== email;
+              return (
+                <article key={user.id} className={`grid gap-4 rounded-2xl border p-4 sm:grid-cols-[1fr_auto] sm:items-center ${protectedUser ? 'border-amber-200 bg-amber-50/40' : 'border-slate-100'}`}>
+                  <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-bold text-slate-800">{user.nombre}</h3>{protectedUser && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black uppercase text-amber-800"><ShieldCheck size={12} /> Protegido</span>}</div><p className="mt-1 font-mono text-xs text-slate-500">DNI: {user.dni || user.id.split('@')[0]}</p></div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {protectedUser ? <span className={`rounded-full border px-3 py-2 text-xs font-black ${roleStyles.superusuario}`}>Modo Dios</span> : <select value={user.rol} disabled={!canEdit || updatingId === user.id} onChange={(event) => handleChangeRole(user, event.target.value as AssignableRole)} className={`w-36 rounded-full border px-3 py-2 text-xs font-bold outline-none disabled:cursor-not-allowed disabled:opacity-65 ${roleStyles[user.rol]}`}>{ASSIGNABLE_ROLES.map((role) => <option key={role} value={role}>{ROLE_LABELS[role]}</option>)}</select>}
+                    <button type="button" disabled={!canChangePassword} onClick={() => { setPasswordUser(user); setNewPassword(''); }} className="rounded-full p-2 text-slate-400 transition hover:bg-blue-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30" title="Cambiar contraseña"><Key size={18} /></button>
+                    <button type="button" disabled={!canEdit} onClick={() => setDeletingUser(user)} className="rounded-full p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30" title={protectedUser ? 'Cuenta protegida' : 'Eliminar usuario'}><Trash2 size={18} /></button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        </div>
-
-        {/* Tabla de Usuarios */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 overflow-hidden">
-            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
-              <div className="bg-purple-50 p-2 rounded-xl text-purple-600">
-                <Shield size={24} />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-dark">Equipo Registrado</h2>
-                <p className="text-xs text-gray-500">{usuarios.length} usuarios en total</p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="py-4 px-4 font-bold text-sm text-gray-500 uppercase tracking-wider">Nombre</th>
-                    <th className="py-4 px-4 font-bold text-sm text-gray-500 uppercase tracking-wider">DNI / Usuario</th>
-                    <th className="py-4 px-4 font-bold text-sm text-gray-500 uppercase tracking-wider">Rol</th>
-                    <th className="py-4 px-4 font-bold text-sm text-gray-500 uppercase tracking-wider text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {usuarios.map((usr) => (
-                    <tr key={usr.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-4 px-4 font-medium text-dark">{usr.nombre}</td>
-                      <td className="py-4 px-4 text-gray-600 font-mono text-sm">{usr.dni}</td>
-                      <td className="py-4 px-4">{getRoleSelect(usr)}</td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            onClick={() => { setPasswordUser(usr); setNewPassword(""); }}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
-                            title="Cambiar Contraseña"
-                          >
-                            <Key size={18} />
-                          </button>
-                          <button
-                            onClick={() => setDeletingUser(usr)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            title="Eliminar Usuario"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {usuarios.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-500">
-                        No hay usuarios registrados.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
 
-      {/* Modal Cambiar Contraseña */}
-      {passwordUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">Cambiar Contraseña</h3>
-            <p className="text-slate-500 text-sm mb-6">
-              Estás a punto de forzar el cambio de contraseña para <strong>{passwordUser.nombre}</strong>.
-            </p>
-            
-            <form onSubmit={handlePasswordChangeSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Nueva Contraseña</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
+      <RolePermissionsPanel />
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setPasswordUser(null)}
-                  className="flex-1 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingPassword}
-                  className="flex-1 flex justify-center items-center gap-2 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-dark transition-colors disabled:opacity-50"
-                >
-                  {savingPassword ? <Loader2 size={18} className="animate-spin" /> : "Guardar Clave"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {passwordUser && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"><form onSubmit={handlePasswordChange} className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl"><h3 className="text-2xl font-black text-slate-800">Cambiar contraseña</h3><p className="mt-2 text-sm text-slate-500">Nueva clave para <strong>{passwordUser.nombre}</strong>.</p><input autoFocus required type="password" minLength={8} maxLength={128} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="mt-6 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="Mínimo 8 caracteres" /><div className="mt-6 flex gap-3"><button type="button" onClick={() => setPasswordUser(null)} className="flex-1 rounded-xl bg-slate-100 py-3 font-bold text-slate-700">Cancelar</button><button type="submit" disabled={savingPassword} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-bold text-white disabled:opacity-50">{savingPassword && <Loader2 size={17} className="animate-spin" />} Guardar</button></div></form></div>}
 
-      {/* Modal Eliminar Usuario */}
-      {deletingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 text-center">
-            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={32} />
-            </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">Eliminar Usuario</h3>
-            <p className="text-slate-500 text-sm mb-6">
-              ¿Estás seguro de que deseas eliminar permanentemente el acceso de <strong>{deletingUser.nombre}</strong>? Esta acción no se puede deshacer.
-            </p>
-            
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setDeletingUser(null)}
-                className="flex-1 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteUserConfirm}
-                disabled={isDeleting}
-                className="flex-1 flex justify-center items-center gap-2 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {isDeleting ? <Loader2 size={18} className="animate-spin" /> : "Sí, eliminar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {deletingUser && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"><div className="w-full max-w-md rounded-3xl bg-white p-7 text-center shadow-2xl"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600"><Trash2 size={30} /></div><h3 className="mt-4 text-2xl font-black text-slate-800">Eliminar usuario</h3><p className="mt-2 text-sm leading-6 text-slate-500">Se eliminará permanentemente el acceso de <strong>{deletingUser.nombre}</strong> y sus suscripciones de notificación.</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setDeletingUser(null)} className="flex-1 rounded-xl bg-slate-100 py-3 font-bold text-slate-700">Cancelar</button><button type="button" onClick={handleDelete} disabled={isDeleting} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-3 font-bold text-white disabled:opacity-50">{isDeleting && <Loader2 size={17} className="animate-spin" />} Eliminar</button></div></div></div>}
     </div>
   );
 }

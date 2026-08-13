@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
+import { SUPERUSER_EMAIL } from '@/lib/access-control';
 import {
   ApiError,
   apiErrorResponse,
   readJsonBody,
-  requireAdmin,
+  requirePermission,
 } from '@/lib/server/admin-auth';
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAdmin(request);
+    const session = await requirePermission(request, 'users.manage');
     const body = await readJsonBody(request);
     const uid = typeof body.uid === 'string' ? body.uid.trim() : '';
     const userEmail =
@@ -41,9 +42,15 @@ export async function POST(request: Request) {
     if (!profileEmail) {
       throw new ApiError(400, 'El usuario no tiene un correo asociado.');
     }
+    if (profileEmail === SUPERUSER_EMAIL) {
+      throw new ApiError(403, 'La cuenta Modo Dios esta protegida y no puede eliminarse.');
+    }
 
     const profileRef = adminDb.collection('usuarios').doc(profileEmail);
     const profileDoc = await profileRef.get();
+    if (profileDoc.data()?.rol === 'superusuario') {
+      throw new ApiError(403, 'Una cuenta protegida no puede eliminarse.');
+    }
     if (profileDoc.data()?.rol === 'administrador') {
       const admins = await adminDb
         .collection('usuarios')

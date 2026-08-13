@@ -3,7 +3,7 @@ import type { DocumentData, DocumentSnapshot, Firestore } from 'firebase-admin/f
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
-import { ApiError, apiErrorResponse, readJsonBody, requireAdmin } from '@/lib/server/admin-auth';
+import { ApiError, apiErrorResponse, readJsonBody, requirePermission } from '@/lib/server/admin-auth';
 
 export const runtime = 'nodejs';
 
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
     const contentLength = Number(request.headers.get('content-length') || 0);
     if (contentLength > MAX_BODY_BYTES) throw new ApiError(413, 'La solicitud de importación es demasiado grande.');
 
-    const session = await requireAdmin(request);
+    const session = await requirePermission(request, 'electoral.manage');
     const body = await readJsonBody(request);
     const action = typeof body.action === 'string' ? body.action : '';
     if (!['import', 'seed', 'clear'].includes(action)) throw new ApiError(400, 'La operación electoral no es válida.');

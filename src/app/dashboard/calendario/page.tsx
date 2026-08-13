@@ -13,8 +13,6 @@ import {
   subWeeks,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import {
   BellRing,
   ChevronLeft,
@@ -26,7 +24,6 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react';
-import { auth, db } from '@/lib/firebase';
 import {
   calendarioService,
   type ResponsableCalendario,
@@ -34,7 +31,6 @@ import {
 import type {
   ActividadCalendario,
   CategoriaActividad,
-  RolUsuario,
 } from '@/lib/firebase/types';
 import { ActivityDialog } from '@/components/calendar/ActivityDialog';
 import { CalendarBoard } from '@/components/calendar/CalendarBoard';
@@ -45,6 +41,7 @@ import {
 } from '@/components/calendar/calendar-config';
 
 import { usePwaNotifications } from '@/components/pwa/PwaNotificationsProvider';
+import { useAccess } from '@/components/access/AccessContext';
 
 type DialogState = {
   activity: ActividadCalendario | null;
@@ -77,12 +74,12 @@ function moveDate(date: Date, view: CalendarView, direction: -1 | 1) {
 
 export default function CalendarioPage() {
   const { coverage } = usePwaNotifications();
+  const { hasPermission } = useAccess();
   const [activities, setActivities] = useState<ActividadCalendario[]>([]);
   const [responsables, setResponsables] = useState<ResponsableCalendario[]>([]);
   const [view, setView] = useState<CalendarView>('month');
   const [cursor, setCursor] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [role, setRole] = useState<RolUsuario | null>(null);
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<CategoriaActividad | 'todas'>('todas');
@@ -90,24 +87,15 @@ export default function CalendarioPage() {
   const [error, setError] = useState('');
   const deepLinkHandled = useRef(false);
 
-  const canManage = role === 'administrador' || role === 'candidata';
+  const canManage = hasPermission('calendar.manage');
+  const canViewCoverage = hasPermission('users.view');
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user?.email) return;
-      try {
-        const email = user.email.trim().toLowerCase();
-        const profile = await getDoc(doc(db, 'usuarios', email));
-        const profileRole = profile.data()?.rol as RolUsuario | undefined;
-        if (!profileRole) throw new Error('No se encontro el perfil del usuario.');
-        setRole(profileRole);
-        if (profileRole === 'administrador' || profileRole === 'candidata') {
-          setResponsables(await calendarioService.getResponsables());
-        }
-      } catch (profileError) {
-        setError(profileError instanceof Error ? profileError.message : 'No se pudo cargar tu perfil.');
-      }
-    });
+    if (canManage) {
+      calendarioService.getResponsables()
+        .then(setResponsables)
+        .catch(() => setError('No se pudo cargar la lista de responsables.'));
+    }
 
     const unsubscribeCalendar = calendarioService.subscribe(
       (data) => {
@@ -132,10 +120,9 @@ export default function CalendarioPage() {
     );
 
     return () => {
-      unsubscribeAuth();
       unsubscribeCalendar();
     };
-  }, []);
+  }, [canManage]);
 
 
   const filteredActivities = useMemo(() => {
@@ -306,7 +293,7 @@ export default function CalendarioPage() {
         <LayoutList size={20} className="hidden text-blue-300 sm:block" />
       </div>
 
-      {role === 'administrador' && coverage && (
+      {canViewCoverage && coverage && (
         <div className='mt-3 text-center text-xs font-bold text-primary-dark'>
           Cobertura de avisos: {coverage.subscribedUsers} de{' '}
           {coverage.authorizedUsers} usuarios · {coverage.activeDevices}{' '}

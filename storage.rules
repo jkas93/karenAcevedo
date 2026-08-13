@@ -13,24 +13,40 @@ service firebase.storage {
       ).data.rol;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && role() == 'administrador';
+    function isSuperuser() {
+      return isAuthenticated()
+        && request.auth.token.email == '71260540@fuerzaciudadana.pe';
     }
 
-    function canUploadActa() {
-      return isAuthenticated() && role() in ['administrador', 'digitador'];
+    function permissionPath() {
+      return /databases/(default)/documents/rolePermissions/$(role());
+    }
+
+    function fallbackPermission(permission) {
+      return role() == 'administrador'
+        && permission in ['electoral.view', 'electoral.manage', 'actas.view', 'actas.manage']
+        || role() == 'candidata' && permission == 'electoral.view'
+        || role() == 'digitador' && permission in ['actas.view', 'actas.manage'];
+    }
+
+    function hasPermission(permission) {
+      return isSuperuser()
+        || (isAuthenticated()
+          && (firestore.exists(permissionPath())
+            ? firestore.get(permissionPath()).data.permissions[permission] == true
+            : fallbackPermission(permission)));
     }
 
     match /actas/{fileName} {
-      allow read: if isAuthenticated();
-      allow create: if canUploadActa()
+      allow read: if hasPermission('electoral.view') || hasPermission('actas.view');
+      allow create: if hasPermission('actas.manage')
         && resource == null
         && fileName.matches('.*\\.webp')
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'image/webp';
       allow update: if false;
-      allow delete: if isAdmin()
-        || (canUploadActa()
+      allow delete: if hasPermission('electoral.manage')
+        || (hasPermission('actas.manage')
           && resource.metadata.ownerUid == request.auth.uid);
     }
 

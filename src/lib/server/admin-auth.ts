@@ -3,6 +3,15 @@ import 'server-only';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  SUPERUSER_EMAIL,
+  effectiveRole,
+  normalizePermissions,
+  type PermissionKey,
+  type RolePermissions,
+  type UserRole,
+} from '@/lib/access-control';
 
 export class ApiError extends Error {
   constructor(
@@ -17,6 +26,7 @@ export class ApiError extends Error {
 export type AdminSession = {
   token: DecodedIdToken;
   email: string;
+  role: 'superusuario' | 'administrador';
 };
 
 export async function requireAdmin(request: Request): Promise<AdminSession> {
@@ -47,30 +57,25 @@ export async function requireAdmin(request: Request): Promise<AdminSession> {
   const profile = await adminDb.collection('usuarios').doc(email).get();
   const profileData = profile.data();
 
-  if (!profile.exists || profileData?.rol !== 'administrador') {
+  const role = effectiveRole(email, profileData?.rol);
+  if (!profile.exists || (role !== 'administrador' && role !== 'superusuario')) {
     throw new ApiError(403, 'Se requiere rol de administrador.');
   }
 
-  if (profileData.uid && profileData.uid !== token.uid) {
+  if (profileData?.uid && profileData.uid !== token.uid) {
     throw new ApiError(403, 'La cuenta no coincide con el perfil autorizado.');
   }
 
-  return { token, email };
+  return { token, email, role };
 }
 
 export type AuthenticatedSession = {
   token: DecodedIdToken;
   email: string;
-  role: 'administrador' | 'candidata' | 'digitador' | 'usuario';
+  role: UserRole;
   name: string;
+  permissions: RolePermissions;
 };
-
-const AUTHORIZED_ROLES = new Set<AuthenticatedSession['role']>([
-  'administrador',
-  'candidata',
-  'digitador',
-  'usuario',
-]);
 
 export async function requireAuthenticatedUser(
   request: Request,
@@ -99,21 +104,48 @@ export async function requireAuthenticatedUser(
 
   const profile = await adminDb.collection('usuarios').doc(email).get();
   const profileData = profile.data();
-  const role = profileData?.rol as AuthenticatedSession['role'] | undefined;
+  const role = effectiveRole(email, profileData?.rol);
 
-  if (!profile.exists || !role || !AUTHORIZED_ROLES.has(role)) {
+  if (!profile.exists || !role) {
     throw new ApiError(403, 'La cuenta no tiene un perfil autorizado.');
   }
   if (profileData?.uid && profileData.uid !== token.uid) {
     throw new ApiError(403, 'La cuenta no coincide con el perfil autorizado.');
   }
 
+  const permissions = role === 'superusuario'
+    ? { ...DEFAULT_ROLE_PERMISSIONS.superusuario }
+    : normalizePermissions(
+        role,
+        (await adminDb.collection('rolePermissions').doc(role).get()).data()?.permissions,
+      );
+
   return {
     token,
     email,
     role,
     name: String(profileData?.nombre || token.name || email.split('@')[0]),
+    permissions,
   };
+}
+
+export async function requirePermission(
+  request: Request,
+  permission: PermissionKey,
+): Promise<AuthenticatedSession> {
+  const session = await requireAuthenticatedUser(request);
+  if (!session.permissions[permission]) {
+    throw new ApiError(403, 'Tu rol no tiene permisos suficientes para esta operacion.');
+  }
+  return session;
+}
+
+export async function requireSuperuser(request: Request): Promise<AuthenticatedSession> {
+  const session = await requireAuthenticatedUser(request);
+  if (session.email !== SUPERUSER_EMAIL || session.role !== 'superusuario') {
+    throw new ApiError(403, 'Esta operacion requiere Modo Dios.');
+  }
+  return session;
 }
 
 export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {

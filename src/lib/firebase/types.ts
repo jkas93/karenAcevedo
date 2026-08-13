@@ -4,7 +4,9 @@ import type { Timestamp } from 'firebase/firestore';
 // TIPOS CENTRALES — Toda la app debe importar desde aquí
 // ============================================================
 
-export type RolUsuario = 'administrador' | 'candidata' | 'digitador' | 'usuario';
+import type { UserRole } from '@/lib/access-control';
+
+export type RolUsuario = UserRole;
 
 export type Usuario = {
   id: string;           // doc ID = email (DNI@fuerzaciudadana.pe)
