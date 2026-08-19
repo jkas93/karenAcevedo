@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CALENDAR_TIME_ZONE } from '@/lib/calendar-timezone';
 import {
   CalendarClock,
   Check,
@@ -282,6 +283,7 @@ export function ActivityDialog({
       categoria: form.categoria,
       prioridad: form.prioridad,
       estado: form.estado,
+      timeZone: CALENDAR_TIME_ZONE,
     };
 
     setBusy('save');

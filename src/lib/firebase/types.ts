@@ -93,6 +93,7 @@ export interface ActividadCalendario {
   categoria: CategoriaActividad;
   prioridad: PrioridadActividad;
   estado: EstadoActividad;
+  timeZone?: 'America/Lima';
   creadoPor: string;
   creadoPorNombre: string;
   createdAt?: Timestamp | null;

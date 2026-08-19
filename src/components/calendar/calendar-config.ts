@@ -1,4 +1,10 @@
 import type { CategoriaActividad, EstadoActividad, PrioridadActividad } from '@/lib/firebase/types';
+import {
+  calendarDateInput,
+  calendarDateTimeToDate,
+  calendarTimeInput,
+  toCalendarWallClock,
+} from '@/lib/calendar-timezone';
 
 export type CalendarView = 'month' | 'week' | 'day' | 'list';
 
@@ -35,19 +41,17 @@ export const STATUS_OPTIONS = Object.entries(STATUS_META) as [
 ][];
 
 export function timestampDate(value: { toDate(): Date } | null | undefined) {
-  return value?.toDate?.() || new Date(0);
+  return value?.toDate?.() ? toCalendarWallClock(value.toDate()) : new Date(0);
 }
 
 export function toDateInput(date: Date) {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
+  return calendarDateInput(date);
 }
 
 export function toTimeInput(date: Date) {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(11, 16);
+  return calendarTimeInput(date);
 }
 
 export function combineLocal(date: string, time: string) {
-  return new Date(`${date}T${time || '00:00'}:00`);
+  return calendarDateTimeToDate(date, time || '00:00');
 }

@@ -39,6 +39,7 @@ import {
 
 import { usePwaNotifications } from '@/components/pwa/PwaNotificationsProvider';
 import { useAccess } from '@/components/access/AccessContext';
+import { calendarNow } from '@/lib/calendar-timezone';
 
 type DialogState = {
   activity: ActividadCalendario | null;
@@ -75,8 +76,8 @@ export default function CalendarioPage() {
   const [activities, setActivities] = useState<ActividadCalendario[]>([]);
   const [responsables, setResponsables] = useState<ResponsableCalendario[]>([]);
   const [view, setView] = useState<CalendarView>('month');
-  const [cursor, setCursor] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [cursor, setCursor] = useState(calendarNow);
+  const [selectedDate, setSelectedDate] = useState(calendarNow);
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [category, setCategory] = useState<CategoriaActividad | 'todas'>('todas');
   const [loading, setLoading] = useState(true);
@@ -127,7 +128,7 @@ export default function CalendarioPage() {
   }, [activities, category]);
 
   const goToToday = () => {
-    const today = new Date();
+    const today = calendarNow();
     setCursor(today);
     setSelectedDate(today);
   };

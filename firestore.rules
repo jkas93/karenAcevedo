@@ -85,7 +85,7 @@ service cloud.firestore {
         && data.keys().hasOnly([
           'titulo', 'descripcion', 'inicio', 'fin', 'todoElDia', 'ubicacion',
           'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado',
-          'creadoPor', 'creadoPorNombre', 'createdAt', 'updatedAt'
+          'timeZone', 'creadoPor', 'creadoPorNombre', 'createdAt', 'updatedAt'
         ])
         && data.titulo is string
         && data.titulo.size() >= 2
@@ -106,6 +106,7 @@ service cloud.firestore {
         && data.categoria in ['territorio', 'reunion', 'comunicacion', 'capacitacion', 'electoral', 'logistica']
         && data.prioridad in ['baja', 'normal', 'alta']
         && data.estado in ['programada', 'confirmada', 'completada', 'cancelada']
+        && (!('timeZone' in data) || data.timeZone == 'America/Lima')
         && data.creadoPor is string
         && data.creadoPorNombre is string
         && data.createdAt is timestamp
@@ -226,7 +227,7 @@ service cloud.firestore {
       allow update: if hasPermission('calendar.manage')
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'titulo', 'descripcion', 'inicio', 'fin', 'todoElDia', 'ubicacion',
-          'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado',
+          'responsableId', 'responsableNombre', 'categoria', 'prioridad', 'estado', 'timeZone',
           'updatedAt'
         ])
         && request.resource.data.updatedAt == request.time
@@ -243,6 +244,18 @@ service cloud.firestore {
     }
 
     match /pushSubscriptions/{docId} {
+      allow read, write: if false;
+    }
+
+    match /notificationDeliveries/{docId} {
+      allow read, write: if false;
+    }
+
+    match /notificationDeviceEvents/{docId} {
+      allow read, write: if false;
+    }
+
+    match /notificationReminderDeliveries/{docId} {
       allow read, write: if false;
     }
 

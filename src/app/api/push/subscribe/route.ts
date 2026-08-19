@@ -6,8 +6,9 @@ import {
   ApiError,
   apiErrorResponse,
   readJsonBody,
-  requireAuthenticatedUser,
+  requirePermission,
 } from '@/lib/server/admin-auth';
+import { normalizeNotificationPreferences } from '@/lib/pwa/notification-preferences';
 
 function readSubscription(body: Record<string, unknown>) {
   const subscription = body.subscription;
@@ -39,7 +40,7 @@ function readSubscription(body: Record<string, unknown>) {
 
 export async function POST(request: Request) {
   try {
-    const session = await requireAuthenticatedUser(request);
+    const session = await requirePermission(request, 'calendar.view');
     const body = await readJsonBody(request);
     const subscription = readSubscription(body);
     const subscriptionId = createHash('sha256')
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
         userEmail: session.email,
         userName: session.name,
         role: session.role,
+        preferences: normalizeNotificationPreferences(existing.data()?.preferences),
         userAgent: (request.headers.get('user-agent') || '').slice(0, 300),
         enabled: true,
         updatedAt: FieldValue.serverTimestamp(),

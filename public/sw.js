@@ -34,20 +34,39 @@ self.addEventListener('push', (event) => {
     data: {
       url: data.url || APP_PATH,
       receivedAt: Date.now(),
+      eventId: data.eventId,
+      clickToken: data.clickToken,
     },
   };
+  if (Array.isArray(data.actions)) options.actions = data.actions.slice(0, 1);
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Equipo Karen Acevedo', options),
+    Promise.all([
+      self.registration.showNotification(data.title || 'Equipo Karen Acevedo', options),
+      typeof self.navigator?.setAppBadge === 'function'
+        ? self.navigator.setAppBadge(1).catch(() => undefined)
+        : Promise.resolve(),
+    ]),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = new URL(event.notification.data?.url || APP_PATH, self.location.origin).href;
+  const eventId = event.notification.data?.eventId;
+  const clickToken = event.notification.data?.clickToken;
+  const tracking = eventId && clickToken
+    ? fetch('/api/push/event', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, clickToken }), keepalive: true,
+      }).catch(() => undefined)
+    : Promise.resolve();
+  const clearBadge = typeof self.navigator?.clearAppBadge === 'function'
+    ? self.navigator.clearAppBadge().catch(() => undefined)
+    : Promise.resolve();
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    Promise.all([tracking, clearBadge, self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
         if ('focus' in client && new URL(client.url).origin === self.location.origin) {
           if ('navigate' in client) {
@@ -57,7 +76,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       return self.clients.openWindow ? self.clients.openWindow(targetUrl) : undefined;
-    }),
+    })]),
   );
 });
 

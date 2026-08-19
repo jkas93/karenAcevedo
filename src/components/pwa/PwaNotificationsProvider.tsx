@@ -5,6 +5,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { authenticatedPost } from '@/lib/firebase/authenticated-request';
 import { VAPID_PUBLIC_KEY } from '@/lib/pwa/push-config';
 import { usePwaInstall } from '@/components/pwa/PwaInstallProvider';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  normalizeNotificationPreferences,
+  type NotificationPreferences,
+} from '@/lib/pwa/notification-preferences';
 
 export type NotificationCoverage = {
   authorizedUsers: number;
@@ -19,11 +24,14 @@ type PwaNotificationsContextValue = {
   busy: boolean;
   message: string;
   coverage: NotificationCoverage | null;
+  preferences: NotificationPreferences;
+  savingPreferences: boolean;
   enablePush: () => Promise<boolean>;
   disablePush: () => Promise<void>;
   clearMessage: () => void;
   refreshCoverage: () => Promise<void>;
   openOnboarding: () => void;
+  updatePreferences: (preferences: NotificationPreferences) => Promise<void>;
 };
 
 const SERVICE_WORKER_TIMEOUT_MS = 15_000;
@@ -115,6 +123,8 @@ export function PwaNotificationsProvider({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [coverage, setCoverage] = useState<NotificationCoverage | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
+  const [savingPreferences, setSavingPreferences] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [activationComplete, setActivationComplete] = useState(false);
   const pushEnabled = Boolean(subscription && serverRegistered && permission === 'granted');
@@ -127,6 +137,13 @@ export function PwaNotificationsProvider({
       console.warn('No se pudo consultar la cobertura de avisos:', error);
     }
   }, [isAdmin]);
+
+  const loadPreferences = useCallback(async (current: PushSubscription) => {
+    const response = await authenticatedPost<{ preferences: NotificationPreferences }>('/api/push/preferences', {
+      action: 'get', endpoint: current.endpoint,
+    });
+    setPreferences(normalizeNotificationPreferences(response.preferences));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +168,7 @@ export function PwaNotificationsProvider({
         await authenticatedPost('/api/push/subscribe', {
           subscription: currentSubscription.toJSON(),
         });
+        await loadPreferences(currentSubscription);
       }
       if (!cancelled) {
         setSubscription(currentSubscription);
@@ -175,7 +193,7 @@ export function PwaNotificationsProvider({
     return () => {
       cancelled = true;
     };
-  }, [refreshCoverage]);
+  }, [loadPreferences, refreshCoverage]);
 
   useEffect(() => {
     if (
@@ -229,6 +247,7 @@ export function PwaNotificationsProvider({
       await authenticatedPost('/api/push/subscribe', {
         subscription: current.toJSON(),
       });
+      await loadPreferences(current);
       setSubscription(current);
       setServerRegistered(true);
       setActivationComplete(true);
@@ -251,6 +270,7 @@ export function PwaNotificationsProvider({
     installed,
     isIOS,
     openInstallOnboarding,
+    loadPreferences,
     refreshCoverage,
     subscription,
     supported,
@@ -291,6 +311,24 @@ export function PwaNotificationsProvider({
   }, [refreshCoverage, subscription]);
 
   const clearMessage = useCallback(() => setMessage(''), []);
+  const updatePreferences = useCallback(async (next: NotificationPreferences) => {
+    if (!subscription) throw new Error('Activa primero los avisos en este dispositivo.');
+    setSavingPreferences(true);
+    setMessage('');
+    try {
+      const normalized = normalizeNotificationPreferences(next);
+      const response = await authenticatedPost<{ preferences: NotificationPreferences }>('/api/push/preferences', {
+        action: 'update', endpoint: subscription.endpoint, preferences: normalized,
+      });
+      setPreferences(normalizeNotificationPreferences(response.preferences));
+      setMessage('Preferencias de avisos guardadas para este dispositivo.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudieron guardar las preferencias.');
+      throw error;
+    } finally {
+      setSavingPreferences(false);
+    }
+  }, [subscription]);
   const openOnboarding = useCallback(() => {
     setActivationComplete(false);
     setOnboardingOpen(true);
@@ -303,11 +341,14 @@ export function PwaNotificationsProvider({
       busy,
       message,
       coverage,
+      preferences,
+      savingPreferences,
       enablePush,
       disablePush,
       clearMessage,
       refreshCoverage,
       openOnboarding,
+      updatePreferences,
     }),
     [
       busy,
@@ -318,9 +359,12 @@ export function PwaNotificationsProvider({
       message,
       openOnboarding,
       permission,
+      preferences,
       pushEnabled,
       refreshCoverage,
       supported,
+      savingPreferences,
+      updatePreferences,
     ],
   );
 
