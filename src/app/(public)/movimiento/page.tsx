@@ -1,9 +1,16 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download, Repeat2 } from "lucide-react";
+import Image from "next/image";
+import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download, Repeat2, ExternalLink } from "lucide-react";
 import { agendaService } from "@/lib/firebase/agenda-service";
 import type { ActividadAgenda } from "@/lib/firebase/types";
+
+const STICKER_PACK_URL = 'https://sticker.ly/s/5ZP3MN';
+const STICKERS = [1, 2, 3, 4].map((number) => ({
+  src: `/stickers/karen-acevedo/sticker-${String(number).padStart(2, '0')}.webp`,
+  alt: `Sticker oficial de Karin Acevedo ${number}`,
+}));
 
 export default function MovimientoPage() {
   const [actividades, setActividades] = useState<ActividadAgenda[]>([]);
@@ -96,11 +103,45 @@ export default function MovimientoPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                <button type="button" disabled title="Próximamente" className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 opacity-70 cursor-not-allowed group">
-                  <MessageCircle size={40} className="text-primary mb-4 group-hover:scale-110 transition-transform" />
-                  <span className="font-bold text-dark">Stickers de WhatsApp</span>
-                  <span className="text-xs text-text mt-2">Próximamente</span>
-                </button>
+                <article className="flex flex-col rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                  <div className="grid grid-cols-4 gap-1.5" aria-label="Vista previa del paquete de stickers">
+                    {STICKERS.map((sticker) => (
+                      <div key={sticker.src} className="aspect-square overflow-hidden rounded-xl bg-white ring-1 ring-emerald-100">
+                        <Image
+                          src={sticker.src}
+                          alt={sticker.alt}
+                          width={96}
+                          height={96}
+                          className="h-full w-full object-contain p-1"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 text-dark">
+                    <MessageCircle size={22} className="shrink-0 text-emerald-600" />
+                    <h3 className="font-bold">Stickers de WhatsApp</h3>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-text">
+                    Abre el paquete oficial en Sticker.ly y agrégalo a WhatsApp.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <a
+                      href={STICKER_PACK_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700"
+                    >
+                      Agregar a WhatsApp <ExternalLink size={16} />
+                    </a>
+                    <a
+                      href="/stickers/karen-acevedo/stickers-karen-acevedo.zip"
+                      download="stickers-karen-acevedo.zip"
+                      className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+                    >
+                      Descargar paquete ZIP <Download size={14} />
+                    </a>
+                  </div>
+                </article>
 
                 <button type="button" disabled title="Próximamente" className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 opacity-70 cursor-not-allowed group">
                   <Camera size={40} className="text-secondary mb-4 group-hover:scale-110 transition-transform" />
