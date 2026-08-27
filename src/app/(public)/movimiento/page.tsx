@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download } from "lucide-react";
+import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download, Repeat2 } from "lucide-react";
 import { agendaService } from "@/lib/firebase/agenda-service";
 import type { ActividadAgenda } from "@/lib/firebase/types";
 
 export default function MovimientoPage() {
   const [actividades, setActividades] = useState<ActividadAgenda[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loopEnabled, setLoopEnabled] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -126,11 +127,28 @@ export default function MovimientoPage() {
                       ref={audioRef}
                       controls 
                       autoPlay
+                      loop={loopEnabled}
                       src="/jingle-karen-acevedo-2027.mp3" 
                       className="w-full max-w-sm"
                     >
                       Tu navegador no soporta el elemento de audio.
                     </audio>
+                    <button
+                      type="button"
+                      aria-pressed={loopEnabled}
+                      onClick={() => setLoopEnabled((enabled) => !enabled)}
+                      className={`flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
+                        loopEnabled
+                          ? 'border-primary/30 bg-primary/10 text-primary-dark'
+                          : 'border-slate-200 bg-white text-slate-500 hover:border-primary/30'
+                      }`}
+                    >
+                      <Repeat2 size={16} />
+                      Repetición automática: {loopEnabled ? 'activada' : 'desactivada'}
+                    </button>
+                    <span className="text-[11px] text-text">
+                      Al terminar, el jingle volverá a comenzar automáticamente.
+                    </span>
                   </div>
                 </div>
 
