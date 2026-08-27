@@ -9,7 +9,9 @@ test('las páginas públicas muestran accesos flotantes a TikTok y Facebook', as
 
   assert.match(component, /https:\/\/www\.tiktok\.com\/@karenacevedo_chaclacayo/);
   assert.match(component, /https:\/\/www\.facebook\.com\/KarenAcevedoChaclacayo\//);
-  assert.match(component, /fixed bottom-24 right-3/);
+  assert.match(component, /bottom: 'max\(1rem, env\(safe-area-inset-bottom\)\)'/);
+  assert.match(component, /right: 'max\(1rem, env\(safe-area-inset-right\)\)'/);
+  assert.match(component, /backdrop-blur-xl/);
   assert.match(component, /target="_blank"/);
   assert.match(component, /rel="noopener noreferrer"/);
   assert.match(publicLayout, /<FloatingSocialButtons \/>/);
