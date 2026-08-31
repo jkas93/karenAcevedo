@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('la playlist conserva el jingle y reproduce las cuatro canciones en secuencia', async () => {
+test('la playlist conserva el jingle y reproduce las cinco canciones en secuencia', async () => {
   const source = await readFile(new URL('../src/app/(public)/movimiento/page.tsx', import.meta.url), 'utf8');
   assert.match(source, /useState\(true\)/);
   assert.match(source, /onEnded=\{handleTrackEnded\}/);
@@ -11,6 +11,7 @@ test('la playlist conserva el jingle y reproduce las cuatro canciones en secuenc
   assert.match(source, /jingle-karen-acevedo-2027\.mp3/);
 
   const songs = [
+    'gracias-por-su-carino.mp3',
     'los-jovenes-somos-el-cambio.mp3',
     'chaclacayo-el-verdadero-cambio.mp3',
     'un-chaclacayo-seguro.mp3',
@@ -21,6 +22,14 @@ test('la playlist conserva el jingle y reproduce las cuatro canciones en secuenc
     assert.ok(file.length > 0);
     assert.equal(file.subarray(0, 3).toString('ascii'), 'ID3');
   }
+
+  assert.ok(source.indexOf("title: 'Jingle oficial'") < source.indexOf("title: 'Gracias por su cariño'"));
+  assert.ok(source.indexOf("title: 'Gracias por su cariño'") < source.indexOf("title: 'Los jóvenes somos el cambio'"));
+});
+
+test('el reproductor aparece antes que el Kit Digital', async () => {
+  const source = await readFile(new URL('../src/app/(public)/movimiento/page.tsx', import.meta.url), 'utf8');
+  assert.ok(source.indexOf('id="playlist-heading"') < source.indexOf('id="kit-digital-heading"'));
 });
 
 test('movimiento ya no carga ni muestra la agenda pública', async () => {

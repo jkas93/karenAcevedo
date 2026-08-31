@@ -27,7 +27,7 @@ export default function FloatingSocialButtons() {
   return (
     <nav
       aria-label="Redes sociales de Karen Acevedo"
-      className="fixed z-40 flex items-center gap-2 rounded-full border border-white/80 bg-white/80 p-2 shadow-[0_12px_40px_rgba(15,23,42,0.20)] ring-1 ring-slate-900/5 backdrop-blur-xl"
+      className="fixed z-40 flex items-center gap-1.5 rounded-full border border-white/80 bg-white/85 p-1.5 shadow-[0_12px_40px_rgba(15,23,42,0.20)] ring-1 ring-slate-900/5 backdrop-blur-xl sm:gap-2 sm:p-2"
       style={{
         bottom: 'max(1rem, env(safe-area-inset-bottom))',
         right: 'max(1rem, env(safe-area-inset-right))',
@@ -41,7 +41,7 @@ export default function FloatingSocialButtons() {
           rel="noopener noreferrer"
           aria-label={`Visitar ${social.name} de Karen Acevedo`}
           title={social.name}
-          className={`group relative flex h-12 w-12 items-center justify-center rounded-full p-[2px] text-white shadow-md transition duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 ${social.className}`}
+          className={`group relative flex h-10 w-10 items-center justify-center rounded-full p-[2px] text-white shadow-md transition duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 sm:h-12 sm:w-12 ${social.className}`}
         >
           <span className={`flex h-full w-full items-center justify-center rounded-full ${social.iconClassName}`}>
             {social.icon}
