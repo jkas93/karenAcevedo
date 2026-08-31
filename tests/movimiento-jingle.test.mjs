@@ -4,10 +4,12 @@ import test from 'node:test';
 
 test('la playlist conserva el jingle y reproduce las cinco canciones en secuencia', async () => {
   const source = await readFile(new URL('../src/app/(public)/movimiento/page.tsx', import.meta.url), 'utf8');
-  assert.match(source, /useState\(true\)/);
+  assert.match(source, /useState<RepeatMode>\('playlist'\)/);
   assert.match(source, /onEnded=\{handleTrackEnded\}/);
-  assert.match(source, /aria-pressed=\{loopEnabled\}/);
-  assert.match(source, /Lista en bucle:/);
+  assert.match(source, /loop=\{repeatMode === 'track'\}/);
+  assert.match(source, /aria-label="Repetir la canción actual"/);
+  assert.match(source, /aria-label="Repetir la lista completa"/);
+  assert.match(source, /currentMode === mode \? 'off' : mode/);
   assert.match(source, /jingle-karen-acevedo-2027\.mp3/);
 
   const songs = [

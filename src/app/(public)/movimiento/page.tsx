@@ -8,6 +8,7 @@ import {
   ExternalLink,
   MessageCircle,
   Music,
+  Repeat1,
   Repeat2,
   Share2,
   SkipBack,
@@ -53,8 +54,10 @@ const PLAYLIST = [
   },
 ] as const;
 
+type RepeatMode = 'off' | 'playlist' | 'track';
+
 export default function MovimientoPage() {
-  const [loopEnabled, setLoopEnabled] = useState(true);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('playlist');
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   const currentTrack = PLAYLIST[currentTrackIndex];
@@ -80,9 +83,13 @@ export default function MovimientoPage() {
     const hasNextTrack = currentTrackIndex < PLAYLIST.length - 1;
     if (hasNextTrack) {
       setCurrentTrackIndex((index) => index + 1);
-    } else if (loopEnabled) {
+    } else if (repeatMode === 'playlist') {
       setCurrentTrackIndex(0);
     }
+  };
+
+  const toggleRepeatMode = (mode: Exclude<RepeatMode, 'off'>) => {
+    setRepeatMode((currentMode) => currentMode === mode ? 'off' : mode);
   };
 
   return (
@@ -126,33 +133,52 @@ export default function MovimientoPage() {
                       autoPlay
                       preload="metadata"
                       src={currentTrack.src}
+                      loop={repeatMode === 'track'}
                       onEnded={handleTrackEnded}
                       className="mt-4 block w-full max-w-full"
                     >
                       Tu navegador no soporta el elemento de audio.
                     </audio>
 
-                    <div className="mt-4 flex min-w-0 items-center justify-center gap-2">
+                    <div className="mt-4 flex min-w-0 items-center justify-center gap-2" aria-label="Controles de reproducción">
                       <button type="button" onClick={playPrevious} aria-label="Canción anterior" className="grid min-h-10 min-w-10 shrink-0 place-items-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/20 sm:min-h-11 sm:min-w-11">
                         <SkipBack size={18} />
                       </button>
                       <button
                         type="button"
-                        aria-pressed={loopEnabled}
-                        onClick={() => setLoopEnabled((enabled) => !enabled)}
-                        className={`flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2 py-2 text-[11px] font-bold transition sm:min-h-11 sm:flex-none sm:gap-2 sm:px-4 sm:text-xs ${
-                          loopEnabled
+                        aria-label="Repetir la canción actual"
+                        title="Repetir canción"
+                        aria-pressed={repeatMode === 'track'}
+                        onClick={() => toggleRepeatMode('track')}
+                        className={`grid min-h-10 min-w-10 shrink-0 place-items-center rounded-full border transition sm:min-h-11 sm:min-w-11 ${
+                          repeatMode === 'track'
                             ? 'border-secondary/50 bg-secondary/20 text-white'
                             : 'border-white/15 bg-white/10 text-white/65 hover:bg-white/20'
                         }`}
                       >
-                        <Repeat2 size={15} className="shrink-0 sm:h-4 sm:w-4" />
-                        <span className="truncate">Lista en bucle: {loopEnabled ? 'activada' : 'desactivada'}</span>
+                        <Repeat1 size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Repetir la lista completa"
+                        title="Repetir lista"
+                        aria-pressed={repeatMode === 'playlist'}
+                        onClick={() => toggleRepeatMode('playlist')}
+                        className={`grid min-h-10 min-w-10 shrink-0 place-items-center rounded-full border transition sm:min-h-11 sm:min-w-11 ${
+                          repeatMode === 'playlist'
+                            ? 'border-secondary/50 bg-secondary/20 text-white'
+                            : 'border-white/15 bg-white/10 text-white/65 hover:bg-white/20'
+                        }`}
+                      >
+                        <Repeat2 size={18} />
                       </button>
                       <button type="button" onClick={playNext} aria-label="Siguiente canción" className="grid min-h-10 min-w-10 shrink-0 place-items-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/20 sm:min-h-11 sm:min-w-11">
                         <SkipForward size={18} />
                       </button>
                     </div>
+                    <p aria-live="polite" className="mt-2 min-h-4 text-center text-[10px] font-bold uppercase tracking-wider text-secondary/80">
+                      {repeatMode === 'track' ? 'Repetir canción' : repeatMode === 'playlist' ? 'Repetir lista' : 'Sin repetición'}
+                    </p>
                     <p className="mt-3 text-center text-[11px] leading-5 text-white/50">
                       Las canciones avanzan automáticamente. La reproducción puede requerir un toque inicial según el navegador.
                     </p>
