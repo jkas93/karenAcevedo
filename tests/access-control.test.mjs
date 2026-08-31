@@ -29,23 +29,22 @@ test('Modo Dios conserva todos los permisos aunque reciba una matriz falsa', () 
 
 test('una matriz inconsistente nunca concede administración sin lectura', () => {
   const inconsistent = normalizePermissions('usuario', {
-    'agenda.view': false,
-    'agenda.manage': true,
+    'electoral.view': false,
+    'electoral.manage': true,
   });
-  assert.equal(inconsistent['agenda.view'], false);
-  assert.equal(inconsistent['agenda.manage'], false);
+  assert.equal(inconsistent['electoral.view'], false);
+  assert.equal(inconsistent['electoral.manage'], false);
 
   const withoutView = normalizePermissions('administrador', {
-    'agenda.view': false,
-    'agenda.manage': false,
+    'electoral.view': false,
+    'electoral.manage': false,
   });
-  assert.equal(withoutView['agenda.view'], false);
-  assert.equal(withoutView['agenda.manage'], false);
+  assert.equal(withoutView['electoral.view'], false);
+  assert.equal(withoutView['electoral.manage'], false);
 });
 
 test('cada ruta del panel se asigna al permiso de lectura esperado', () => {
   assert.equal(permissionForDashboardPath('/dashboard/calendario'), 'calendar.view');
-  assert.equal(permissionForDashboardPath('/dashboard/agenda'), 'agenda.view');
   assert.equal(permissionForDashboardPath('/dashboard/usuarios'), 'users.view');
   assert.equal(permissionForDashboardPath('/dashboard'), 'volunteers.view');
 });

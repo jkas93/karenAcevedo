@@ -4,7 +4,6 @@ import { useEffect, useState, type ComponentType } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Calendar,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -50,7 +49,6 @@ type MenuItem = {
 const MENU_ITEMS: MenuItem[] = [
   { href: '/dashboard/calendario', label: 'Calendario operativo', permission: 'calendar.view', icon: CalendarDays, matches: (path) => path.startsWith('/dashboard/calendario') },
   { href: '/dashboard', label: 'Voluntarios', permission: 'volunteers.view', icon: Users, matches: (path) => path === '/dashboard' },
-  { href: '/dashboard/agenda', label: 'Agenda Pública', permission: 'agenda.view', icon: Calendar, matches: (path) => path.startsWith('/dashboard/agenda') },
   { href: '/dashboard/control-electoral', label: 'Control Electoral', permission: 'electoral.view', icon: Map, matches: (path) => path.startsWith('/dashboard/control-electoral') },
   { href: '/dashboard/digitacion', label: 'Ingreso de Actas', permission: 'actas.view', icon: ClipboardCheck, matches: (path) => path.startsWith('/dashboard/digitacion') },
   { href: '/dashboard/equipo', label: 'Fichas del equipo', permission: 'teamProfiles.view', icon: ClipboardList, matches: (path) => path.startsWith('/dashboard/equipo') },
@@ -61,7 +59,6 @@ const MENU_ITEMS: MenuItem[] = [
 const MODULE_LABELS: Record<PermissionKey, string> = {
   'calendar.view': 'Calendario operativo', 'calendar.manage': 'Calendario operativo',
   'volunteers.view': 'Voluntarios', 'volunteers.manage': 'Voluntarios',
-  'agenda.view': 'Agenda pública', 'agenda.manage': 'Agenda pública',
   'electoral.view': 'Control electoral', 'electoral.manage': 'Control electoral',
   'actas.view': 'Ingreso de actas', 'actas.manage': 'Ingreso de actas',
   'teamProfiles.view': 'Fichas del equipo', 'teamProfiles.manage': 'Fichas del equipo',

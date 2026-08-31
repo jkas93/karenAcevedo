@@ -30,13 +30,13 @@ service cloud.firestore {
     function fallbackPermission(permission) {
       return role() == 'administrador' && permission in [
           'calendar.view', 'calendar.manage', 'volunteers.view', 'volunteers.manage',
-          'agenda.view', 'agenda.manage', 'electoral.view', 'electoral.manage',
+          'electoral.view', 'electoral.manage',
           'actas.view', 'actas.manage', 'teamProfiles.view', 'teamProfiles.manage',
           'settings.view', 'settings.manage', 'users.view', 'users.manage'
         ]
         || role() == 'candidata' && permission in [
           'calendar.view', 'calendar.manage', 'volunteers.view', 'volunteers.manage',
-          'agenda.view', 'agenda.manage', 'electoral.view'
+          'electoral.view'
         ]
         || role() == 'digitador' && permission in [
           'calendar.view', 'actas.view', 'actas.manage'
@@ -56,23 +56,6 @@ service cloud.firestore {
 
     function isSelf(userId) {
       return isAuthenticated() && request.auth.token.email == userId;
-    }
-
-    function validAgenda() {
-      let data = request.resource.data;
-      return data.keys().hasAll(['titulo', 'descripcion', 'ubicacion', 'etiqueta', 'fechaDestacada'])
-        && data.keys().hasOnly(['titulo', 'descripcion', 'ubicacion', 'etiqueta', 'fechaDestacada', 'fechaReal', 'createdAt'])
-        && data.titulo is string
-        && data.titulo.size() >= 2
-        && data.titulo.size() <= 120
-        && data.descripcion is string
-        && data.descripcion.size() <= 2000
-        && data.ubicacion is string
-        && data.ubicacion.size() <= 200
-        && data.etiqueta is string
-        && data.etiqueta.size() <= 30
-        && data.fechaDestacada is string
-        && data.fechaDestacada.size() <= 30;
     }
 
     function validCalendarActivity() {
@@ -209,12 +192,6 @@ service cloud.firestore {
         && request.resource.data.correo is string
         && request.resource.data.correo.size() <= 254;
       allow delete: if false;
-    }
-
-    match /agenda/{docId} {
-      allow read: if true;
-      allow create, update: if hasPermission('agenda.manage') && validAgenda();
-      allow delete: if hasPermission('agenda.manage');
     }
 
     match /calendario_actividades/{docId} {

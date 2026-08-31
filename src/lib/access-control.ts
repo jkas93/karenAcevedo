@@ -24,8 +24,6 @@ export const PERMISSION_KEYS = [
   'calendar.manage',
   'volunteers.view',
   'volunteers.manage',
-  'agenda.view',
-  'agenda.manage',
   'electoral.view',
   'electoral.manage',
   'actas.view',
@@ -57,7 +55,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   administrador: withPermissions(
     'calendar.view', 'calendar.manage',
     'volunteers.view', 'volunteers.manage',
-    'agenda.view', 'agenda.manage',
     'electoral.view', 'electoral.manage',
     'actas.view', 'actas.manage',
     'teamProfiles.view', 'teamProfiles.manage',
@@ -67,7 +64,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   candidata: withPermissions(
     'calendar.view', 'calendar.manage',
     'volunteers.view', 'volunteers.manage',
-    'agenda.view', 'agenda.manage',
     'electoral.view',
   ),
   digitador: withPermissions('calendar.view', 'actas.view', 'actas.manage'),
@@ -85,7 +81,6 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const PERMISSION_MODULES = [
   { id: 'calendar', label: 'Calendario operativo', view: 'calendar.view', manage: 'calendar.manage' },
   { id: 'volunteers', label: 'Voluntarios', view: 'volunteers.view', manage: 'volunteers.manage' },
-  { id: 'agenda', label: 'Agenda pública', view: 'agenda.view', manage: 'agenda.manage' },
   { id: 'electoral', label: 'Control electoral', view: 'electoral.view', manage: 'electoral.manage' },
   { id: 'actas', label: 'Ingreso de actas', view: 'actas.view', manage: 'actas.manage' },
   { id: 'teamProfiles', label: 'Fichas del equipo', view: 'teamProfiles.view', manage: 'teamProfiles.manage' },
@@ -133,7 +128,6 @@ export function normalizePermissions(role: UserRole, value: unknown): RolePermis
 
 export function permissionForDashboardPath(pathname: string): PermissionKey {
   if (pathname.startsWith('/dashboard/calendario')) return 'calendar.view';
-  if (pathname.startsWith('/dashboard/agenda')) return 'agenda.view';
   if (pathname.startsWith('/dashboard/control-electoral')) return 'electoral.view';
   if (pathname.startsWith('/dashboard/digitacion')) return 'actas.view';
   if (pathname.startsWith('/dashboard/equipo')) return 'teamProfiles.view';

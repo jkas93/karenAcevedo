@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Share2, MessageCircle, Camera, Music, Loader2, Download, Repeat2, ExternalLink } from "lucide-react";
-import { agendaService } from "@/lib/firebase/agenda-service";
-import type { ActividadAgenda } from "@/lib/firebase/types";
+import {
+  Camera,
+  Download,
+  ExternalLink,
+  MessageCircle,
+  Music,
+  Repeat2,
+  Share2,
+  SkipBack,
+  SkipForward,
+} from "lucide-react";
 
 const STICKER_PACK_URL = 'https://sticker.ly/s/5ZP3MN';
 const STICKERS = [1, 2, 3, 4].map((number) => ({
@@ -12,30 +20,68 @@ const STICKERS = [1, 2, 3, 4].map((number) => ({
   alt: `Sticker oficial de Karin Acevedo ${number}`,
 }));
 
+const PLAYLIST = [
+  {
+    title: 'Jingle oficial',
+    subtitle: 'Fuerza Chaclacayo',
+    src: '/jingle-karen-acevedo-2027.mp3',
+    downloadName: 'jingle-karen-acevedo-2027.mp3',
+  },
+  {
+    title: 'Los jóvenes somos el cambio',
+    subtitle: 'Canción de campaña',
+    src: '/audio/los-jovenes-somos-el-cambio.mp3',
+    downloadName: 'los-jovenes-somos-el-cambio.mp3',
+  },
+  {
+    title: 'Chaclacayo, el verdadero cambio',
+    subtitle: 'Canción de campaña',
+    src: '/audio/chaclacayo-el-verdadero-cambio.mp3',
+    downloadName: 'chaclacayo-el-verdadero-cambio.mp3',
+  },
+  {
+    title: 'Un Chaclacayo seguro',
+    subtitle: 'Canción de campaña',
+    src: '/audio/un-chaclacayo-seguro.mp3',
+    downloadName: 'un-chaclacayo-seguro.mp3',
+  },
+] as const;
+
 export default function MovimientoPage() {
-  const [actividades, setActividades] = useState<ActividadAgenda[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loopEnabled, setLoopEnabled] = useState(true);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const currentTrack = PLAYLIST[currentTrackIndex];
 
   useEffect(() => {
-    // Intentar forzar la reproducción automática al montar el componente
-    if (audioRef.current) {
-      audioRef.current.play().catch(e => console.log("El navegador bloqueó el autoplay:", e));
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.load();
+    audio.play().catch(() => {
+      // Algunos navegadores requieren interacción antes de reproducir audio.
+    });
+  }, [currentTrackIndex]);
+
+  const playTrack = (index: number) => {
+    setCurrentTrackIndex(index);
+  };
+
+  const playPrevious = () => {
+    setCurrentTrackIndex((index) => (index - 1 + PLAYLIST.length) % PLAYLIST.length);
+  };
+
+  const playNext = () => {
+    setCurrentTrackIndex((index) => (index + 1) % PLAYLIST.length);
+  };
+
+  const handleTrackEnded = () => {
+    const hasNextTrack = currentTrackIndex < PLAYLIST.length - 1;
+    if (hasNextTrack) {
+      setCurrentTrackIndex((index) => index + 1);
+    } else if (loopEnabled) {
+      setCurrentTrackIndex(0);
     }
-  }, []);
-
-  useEffect(() => {
-    // Suscripción en tiempo real a la agenda para la web pública
-    const unsubscribe = agendaService.subscribe(
-      (data) => {
-        setActividades(data);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsubscribe();
-  }, []);
+  };
 
   return (
     <div className="bg-white min-h-screen">
@@ -43,55 +89,14 @@ export default function MovimientoPage() {
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl mb-4 text-dark">La campaña <span className="text-primary-dark">está en la calle</span></h1>
           <p className="text-xl max-w-2xl mx-auto text-text">
-            Acompáñanos en nuestras actividades semanales y descárgate el material para apoyarnos en el mundo digital.
+            Descarga y comparte nuestro material oficial para apoyar la campaña desde el mundo digital.
           </p>
         </div>
       </section>
 
       <section className="py-20">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            
-            {/* Agenda */}
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <Calendar className="text-primary-dark" size={32} />
-                <h2 className="text-3xl text-dark m-0">Agenda de Actividades</h2>
-              </div>
-              
-              <div className="space-y-6">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center p-12 text-gray-400 bg-white border border-slate-200 rounded-2xl">
-                    <Loader2 size={32} className="animate-spin mb-4 text-primary" />
-                    <p>Cargando agenda de actividades...</p>
-                  </div>
-                ) : actividades.length === 0 ? (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
-                    <p className="text-dark font-bold text-lg mb-2">No hay actividades programadas</p>
-                    <p className="text-text">Mantente atento a nuestras redes para próximos eventos.</p>
-                  </div>
-                ) : (
-                  actividades.map((act) => (
-                    <div key={act.id} className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row gap-6 hover:shadow-lg transition-shadow">
-                      <div className="bg-dark text-white rounded-xl w-20 h-20 flex flex-col items-center justify-center shrink-0">
-                        <span className="text-sm font-semibold uppercase text-secondary">{act.etiqueta}</span>
-                        <span className="text-lg font-bold">{act.fechaDestacada}</span>
-                      </div>
-                      <div>
-                        <h3 className="text-xl text-dark mb-2 font-bold">{act.titulo}</h3>
-                        <p className="text-text text-sm mb-3">{act.descripcion}</p>
-                        <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm">
-                          <MapPin size={16} className="shrink-0" />
-                          <span>{act.ubicacion}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Kit Digital */}
+          <div className="mx-auto max-w-5xl">
             <div>
               <div className="flex items-center gap-3 mb-8">
                 <Share2 className="text-primary-dark" size={32} />
@@ -101,7 +106,7 @@ export default function MovimientoPage() {
                 Haz campaña desde tu celular. Las elecciones se ganan sumando a más vecinos cada día. ¡Descarga y comparte en tus redes!
               </p>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 
                 <article className="flex flex-col rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
                   <div className="grid grid-cols-4 gap-1.5" aria-label="Vista previa del paquete de stickers">
@@ -149,53 +154,90 @@ export default function MovimientoPage() {
                   <span className="text-xs text-text mt-2">Próximamente</span>
                 </button>
 
-                <div className="sm:col-span-2 flex flex-col gap-4">
-                  <a 
-                    href="/jingle-karen-acevedo-2027.mp3" 
-                    download="jingle-karen-acevedo-2027.mp3"
-                    className="flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl p-8 hover:border-primary hover:bg-primary/5 transition-colors group relative"
-                  >
-                    <Music size={40} className="text-primary-dark mb-4 group-hover:scale-110 transition-transform" />
-                    <span className="font-bold text-dark flex items-center gap-2">
-                      Jingle Oficial (MP3) <Download size={16} className="text-primary"/>
-                    </span>
-                    <span className="text-xs text-text mt-2">&quot;Fuerza Chaclacayo&quot; - Clic para descargar</span>
-                  </a>
-                  
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-sm font-bold text-dark">Escuchar ahora:</span>
-                    <audio 
-                      ref={audioRef}
-                      controls 
-                      autoPlay
-                      loop={loopEnabled}
-                      src="/jingle-karen-acevedo-2027.mp3" 
-                      className="w-full max-w-sm"
-                    >
-                      Tu navegador no soporta el elemento de audio.
-                    </audio>
-                    <button
-                      type="button"
-                      aria-pressed={loopEnabled}
-                      onClick={() => setLoopEnabled((enabled) => !enabled)}
-                      className={`flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
-                        loopEnabled
-                          ? 'border-primary/30 bg-primary/10 text-primary-dark'
-                          : 'border-slate-200 bg-white text-slate-500 hover:border-primary/30'
-                      }`}
-                    >
-                      <Repeat2 size={16} />
-                      Repetición automática: {loopEnabled ? 'activada' : 'desactivada'}
-                    </button>
-                    <span className="text-[11px] text-text">
-                      Al terminar, el jingle volverá a comenzar automáticamente.
-                    </span>
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-primary-dark p-5 text-white shadow-xl sm:col-span-2 sm:p-7">
+                  <div aria-hidden="true" className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-secondary/20 blur-3xl" />
+                  <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+                    <div>
+                      <div className="mb-5 flex items-center gap-3">
+                        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                          <Music size={25} className="text-secondary" />
+                        </span>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-secondary">Playlist oficial</p>
+                          <h3 className="mt-1 text-xl font-black">Música para el cambio</h3>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs font-bold uppercase tracking-wider text-white/55">Reproduciendo</p>
+                        <p className="mt-1 text-lg font-black">{currentTrack.title}</p>
+                        <p className="text-sm text-white/65">{currentTrack.subtitle}</p>
+
+                        <audio
+                          ref={audioRef}
+                          controls
+                          autoPlay
+                          preload="metadata"
+                          src={currentTrack.src}
+                          onEnded={handleTrackEnded}
+                          className="mt-4 w-full"
+                        >
+                          Tu navegador no soporta el elemento de audio.
+                        </audio>
+
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                          <button type="button" onClick={playPrevious} aria-label="Canción anterior" className="grid min-h-11 min-w-11 place-items-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/20">
+                            <SkipBack size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={loopEnabled}
+                            onClick={() => setLoopEnabled((enabled) => !enabled)}
+                            className={`flex min-h-11 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition ${
+                              loopEnabled
+                                ? 'border-secondary/50 bg-secondary/20 text-white'
+                                : 'border-white/15 bg-white/10 text-white/65 hover:bg-white/20'
+                            }`}
+                          >
+                            <Repeat2 size={16} />
+                            Lista en bucle: {loopEnabled ? 'activada' : 'desactivada'}
+                          </button>
+                          <button type="button" onClick={playNext} aria-label="Siguiente canción" className="grid min-h-11 min-w-11 place-items-center rounded-full border border-white/15 bg-white/10 transition hover:bg-white/20">
+                            <SkipForward size={18} />
+                          </button>
+                        </div>
+                        <p className="mt-3 text-center text-[11px] leading-5 text-white/50">
+                          Las canciones avanzan automáticamente. La reproducción puede requerir un toque inicial según el navegador.
+                        </p>
+                      </div>
+                    </div>
+
+                    <ol className="space-y-2" aria-label="Canciones disponibles">
+                      {PLAYLIST.map((track, index) => {
+                        const active = index === currentTrackIndex;
+                        return (
+                          <li key={track.src} className={`flex items-center gap-2 rounded-2xl border p-2 transition ${active ? 'border-secondary/50 bg-white/15' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
+                            <button type="button" onClick={() => playTrack(index)} aria-current={active ? 'true' : undefined} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left">
+                              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black ${active ? 'bg-secondary text-slate-950' : 'bg-white/10 text-white/70'}`}>
+                                {String(index + 1).padStart(2, '0')}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-bold">{track.title}</span>
+                                <span className="block truncate text-xs text-white/50">{active ? 'Sonando ahora' : track.subtitle}</span>
+                              </span>
+                            </button>
+                            <a href={track.src} download={track.downloadName} aria-label={`Descargar ${track.title}`} className="grid min-h-10 min-w-10 place-items-center rounded-xl text-white/60 transition hover:bg-white/10 hover:text-secondary">
+                              <Download size={17} />
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ol>
                   </div>
                 </div>
 
               </div>
             </div>
-
           </div>
         </div>
       </section>

@@ -66,9 +66,7 @@ export type Voluntario = {
   fecha: { seconds: number; nanoseconds: number };
 };
 
-// ─── TIPOS PARA AGENDA (PÚBLICA) ──────────────────────────────────────────────
-
-// Calendario operativo interno. Es independiente de la agenda publica.
+// ─── CALENDARIO OPERATIVO INTERNO ─────────────────────────────────────────────
 export type CategoriaActividad =
   | 'territorio'
   | 'reunion'
@@ -104,17 +102,6 @@ export type ActividadCalendarioInput = Omit<
   ActividadCalendario,
   'id' | 'creadoPor' | 'creadoPorNombre' | 'createdAt' | 'updatedAt'
 >;
-
-export interface ActividadAgenda {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  ubicacion: string;
-  etiqueta: string; // Ej. "Próx.", "Hoy", "Terminado"
-  fechaDestacada: string; // Ej. "2027", "15/10"
-  fechaReal?: Timestamp; // Firestore Timestamp opcional para ordenamiento
-  createdAt?: Timestamp | null; // Firestore Timestamp
-}
 
 // ============================================================
 // PARTIDOS POLÍTICOS — Chaclacayo Elecciones 2026
