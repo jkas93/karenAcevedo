@@ -155,15 +155,6 @@ export default function CalendarioPage() {
 
   return (
     <div className="mx-auto max-w-[1600px] pb-20">
-      <header className="mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#004f8d] via-primary to-[#0798cf] px-4 py-3.5 text-white shadow-lg shadow-blue-100 sm:px-6 sm:py-5">
-        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-bold backdrop-blur sm:mb-2 sm:px-3 sm:text-xs">
-          <Sparkles size={13} className="text-secondary" />
-          Coordinacion interna del equipo
-        </div>
-        <h1 className="text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
-          Calendario operativo
-        </h1>
-      </header>
 
       <section className="mb-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:mb-5 sm:p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -188,23 +179,7 @@ export default function CalendarioPage() {
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-              <select value={category} onChange={(event) => setCategory(event.target.value as CategoriaActividad | 'todas')} aria-label="Filtrar por categoria" className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-medium text-slate-600 outline-none focus:border-primary focus:ring-4 focus:ring-blue-50 sm:w-52 sm:px-4 sm:text-sm">
-                <option value="todas">Todas las categorias</option>
-                {CATEGORY_OPTIONS.map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
-              </select>
-              {canManage ? (
-                <button type="button" onClick={() => createActivity(selectedDate)} className="flex min-w-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-100 transition hover:bg-primary-dark sm:gap-2 sm:px-4 sm:text-sm">
-                  <Plus size={17} className="shrink-0" />
-                  <span className="truncate">Nueva actividad</span>
-                </button>
-              ) : (
-                <span className="flex min-w-0 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-bold text-slate-500 sm:gap-2 sm:px-4">
-                  <Eye size={15} className="shrink-0" />
-                  <span className="truncate">Acceso de lectura</span>
-                </span>
-              )}
-            </div>
+
           </div>
         </div>
       </section>
