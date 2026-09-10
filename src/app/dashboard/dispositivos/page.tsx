@@ -3,31 +3,49 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Smartphone, Plus, RefreshCw, Search, X, ShieldCheck, Link2,
-  CheckCircle2, PauseCircle, XCircle, CheckSquare, Square, Info,
-  ChevronDown, ChevronUp, Clock, AlertTriangle, Layers
+  CheckCircle2, PauseCircle, XCircle, CheckSquare, Square,
+  Clock, AlertTriangle, Layers, ChevronRight, MoreVertical,
+  User, Check, PhoneCall
 } from 'lucide-react';
 import { useAccess } from '@/components/access/AccessContext';
 import { authenticatedPost } from '@/lib/firebase/authenticated-request';
 import { STATE_LABELS, type Device, type DeviceAudit } from '@/lib/autoclicker/types';
 
 const api = <T,>(body: Record<string, unknown>) => authenticatedPost<T>('/api/autoclicker/admin', body);
-const input = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
-const btnBase = 'rounded-xl border px-3 py-2 text-xs font-bold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none';
+const input = 'w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-100';
 const date = (n: number | null) => n ? new Date(n).toLocaleString('es-PE', { timeZone: 'America/Lima' }) : '—';
 const errorText = (e: unknown) => e instanceof Error ? e.message : 'No se pudo completar la operación.';
 
 function StateBadge({ device, now }: { device: Device; now: number }) {
   const expired = device.state === 'enabled' && device.expiresAt !== null && device.expiresAt <= now;
-  const label = expired ? 'Expirado' : STATE_LABELS[device.state];
-  const cls = device.state === 'enabled' && !expired
-    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-    : device.state === 'revoked'
-    ? 'bg-red-100 text-red-800 border border-red-200'
-    : 'bg-slate-100 text-slate-700 border border-slate-200';
+  const isOnline = device.lastSeenAt && now - device.lastSeenAt < 35000;
+
+  if (device.state === 'enabled' && !expired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200/80">
+        <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${isOnline ? 'animate-pulse' : ''}`} />
+        Habilitado
+      </span>
+    );
+  }
+  if (device.state === 'suspended') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 border border-amber-200/80">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+        Suspendido
+      </span>
+    );
+  }
+  if (device.state === 'revoked') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 border border-rose-200/80">
+        Revocado
+      </span>
+    );
+  }
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${cls}`}>
-      {device.state === 'enabled' && !expired && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-      {label}
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+      {expired ? 'Expirado' : STATE_LABELS[device.state] || 'Deshabilitado'}
     </span>
   );
 }
@@ -44,7 +62,6 @@ export default function DevicesPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showGuide, setShowGuide] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [pairOpen, setPairOpen] = useState(false);
@@ -65,7 +82,7 @@ export default function DevicesPage() {
 
   const cancelLoad = useCallback(() => { generation.current++; }, []);
 
-  // ── Keyboard trap for dialogs ──────────────────────────────────────────
+  // ── Keyboard accessibility for modals ──────────────────────────────────
   useEffect(() => {
     if (!pairOpen && !selected) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -111,7 +128,7 @@ export default function DevicesPage() {
     try { await fn(); } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
 
-  // ── Quick action for a single device ───────────────────────────────────
+  // ── Quick action for single device ─────────────────────────────────────
   async function quickChange(deviceId: string, state: 'enabled' | 'suspended' | 'revoked') {
     setQuickBusy(deviceId); setError(''); setMessage('');
     try {
@@ -135,7 +152,7 @@ export default function DevicesPage() {
     }
   }
 
-  // ── Bulk selection helpers ─────────────────────────────────────────────
+  // ── Selection helpers ──────────────────────────────────────────────────
   const selectableDevices = devices.filter(d => d.state !== 'revoked');
   const allSelected = selectableDevices.length > 0 && selectableDevices.every(d => selectedIds.has(d.id));
 
@@ -217,110 +234,66 @@ export default function DevicesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4 p-3 sm:space-y-6 sm:p-6 lg:p-8 pb-28">
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8 pb-32">
+      {/* ── Page Header ────────────────────────────────────────────── */}
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-blue-700 sm:text-sm">
-            <ShieldCheck size={18} /> CONTROL DE ACCESO MÓVIL
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-blue-700">
+            <ShieldCheck size={16} /> Control de Acceso Móvil
           </div>
-          <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">Dispositivos Auto Clicker</h1>
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-            Gestiona autorizaciones, habilita o suspende equipos en lote o de forma individual.
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl mt-0.5">
+            Dispositivos Auto Clicker
+          </h1>
+          <p className="text-xs text-slate-500 sm:text-sm mt-0.5">
+            Autoriza, suspende o gestiona los teléfonos vinculados al equipo de campaña.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {hasPermission('devices.manage') && (
           <button
-            type="button"
-            onClick={() => setShowGuide(prev => !prev)}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
+            className="flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-800 active:scale-[0.98] disabled:opacity-50"
+            onClick={() => { setPairOpen(true); setSelected(null); setPreview(null); setCode(''); setOwner(''); setAlias(''); setError(''); }}
           >
-            <Info size={15} />
-            <span className="hidden sm:inline">Guía de uso</span>
-            {showGuide ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            <Plus size={18} />
+            <span>Vincular teléfono</span>
           </button>
-
-          {hasPermission('devices.manage') && (
-            <button
-              className="flex flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-800 active:scale-[0.98] disabled:opacity-50"
-              onClick={() => { setPairOpen(true); setSelected(null); setPreview(null); setCode(''); setOwner(''); setAlias(''); setError(''); }}
-            >
-              <Plus size={18} /> Vincular teléfono
-            </button>
-          )}
-        </div>
+        )}
       </header>
 
-      {/* ── Collapsible usage guide ────────────────────────────────── */}
-      {showGuide && (
-        <div className="grid gap-3 sm:grid-cols-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 transition-all">
-          <div className="rounded-xl bg-white p-3.5 shadow-xs border border-blue-100">
-            <span className="text-xs font-black text-blue-700">01 · VINCULACIÓN</span>
-            <p className="mt-1 font-bold text-slate-800 text-sm">Código de 6 dígitos</p>
-            <p className="mt-0.5 text-xs text-slate-500">Ingresa el código que muestra la app en el teléfono para vincularlo.</p>
-          </div>
-          <div className="rounded-xl bg-white p-3.5 shadow-xs border border-blue-100">
-            <span className="text-xs font-black text-emerald-700">02 · AUTORIZACIÓN</span>
-            <p className="mt-1 font-bold text-slate-800 text-sm">Habilitación instantánea</p>
-            <p className="mt-0.5 text-xs text-slate-500">Usa los botones individuales o selecciona varios para habilitar en masa.</p>
-          </div>
-          <div className="rounded-xl bg-white p-3.5 shadow-xs border border-blue-100">
-            <span className="text-xs font-black text-amber-700">03 · CONTROL TOTAL</span>
-            <p className="mt-1 font-bold text-slate-800 text-sm">Suspensión remota</p>
-            <p className="mt-0.5 text-xs text-slate-500">Suspende el acceso en cualquier momento. La barra flotante se cerrará sola.</p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Status alerts ──────────────────────────────────────────── */}
+      {/* ── Alerts ─────────────────────────────────────────────────── */}
       {message && (
-        <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-sm font-medium text-emerald-900 shadow-xs">
+        <div role="status" className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-xs animate-in fade-in">
           <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
           <span>{message}</span>
         </div>
       )}
       {error && !pairOpen && !selected && (
-        <div role="alert" className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm font-medium text-red-900 shadow-xs">
+        <div role="alert" className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900 shadow-xs animate-in fade-in">
           <AlertTriangle size={18} className="shrink-0 text-red-600" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* ── Main content card ──────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-        {/* Search, Filter and Selection bar */}
-        <div className="flex flex-col gap-2.5 border-b border-slate-100 p-3 sm:flex-row sm:items-center sm:p-4">
-          <div className="flex items-center gap-2 flex-1">
-            {/* Master Checkbox */}
-            {hasPermission('devices.authorize') && selectableDevices.length > 0 && (
-              <button
-                type="button"
-                onClick={toggleSelectAll}
-                title={allSelected ? 'Deseleccionar todos' : 'Seleccionar todos los activos'}
-                className="flex items-center justify-center p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition"
-              >
-                {allSelected ? <CheckSquare size={20} className="text-blue-700" /> : <Square size={20} className="text-slate-400" />}
-              </button>
-            )}
-
-            <label className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-3 text-slate-400" />
-              <input
-                className={`${input} pl-9`}
-                value={search}
-                maxLength={40}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por propietario, alias o modelo..."
-                aria-label="Buscar dispositivos"
-              />
-            </label>
+      {/* ── Main Container ─────────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
+        {/* Unified Toolbar (Clean, no weird checkboxes) */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-100 p-3 sm:p-4 bg-slate-50/40">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+            <input
+              className={`${input} pl-9`}
+              value={search}
+              maxLength={40}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por propietario, alias o modelo…"
+              aria-label="Buscar dispositivos"
+            />
           </div>
 
           <div className="flex items-center gap-2">
             <select
-              aria-label="Filtrar estado"
-              className={`${input} !w-auto text-xs sm:text-sm`}
+              aria-label="Filtrar por estado"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               value={filter}
               onChange={e => setFilter(e.target.value)}
             >
@@ -328,35 +301,52 @@ export default function DevicesPage() {
               {Object.entries(STATE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
 
+            {/* Mobile multi-select toggle */}
+            {hasPermission('devices.authorize') && selectableDevices.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="lg:hidden flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                {allSelected ? <CheckSquare size={16} className="text-blue-700" /> : <Square size={16} className="text-slate-400" />}
+                <span>{allSelected ? 'Todos' : 'Marcar'}</span>
+              </button>
+            )}
+
             <button
-              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-xs transition hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
               disabled={loading}
               onClick={() => void load()}
               aria-label="Actualizar"
+              title="Actualizar lista"
             >
               <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
 
-        {/* ── Desktop & Tablet Large Table view (hidden on small screens) ── */}
+        {/* ── DESKTOP VIEW: Clean, Spacious, Well-aligned Table ──────── */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100">
+            <thead className="bg-slate-50/70 text-[11px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
               <tr>
-                <th className="w-10 px-4 py-3.5 text-center">
+                <th className="w-12 px-4 py-3.5 text-center">
                   {hasPermission('devices.authorize') && selectableDevices.length > 0 && (
-                    <button type="button" onClick={toggleSelectAll} className="align-middle">
-                      {allSelected ? <CheckSquare size={17} className="text-blue-700" /> : <Square size={17} className="text-slate-400" />}
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      title={allSelected ? 'Deseleccionar todos' : 'Seleccionar todos los activos'}
+                      className="align-middle text-slate-400 hover:text-blue-700 transition"
+                    >
+                      {allSelected ? <CheckSquare size={18} className="text-blue-700" /> : <Square size={18} />}
                     </button>
                   )}
                 </th>
                 <th className="px-4 py-3.5">Propietario / Alias</th>
-                <th className="px-4 py-3.5">Teléfono</th>
+                <th className="px-4 py-3.5">Dispositivo</th>
                 <th className="px-4 py-3.5">Estado</th>
                 <th className="px-4 py-3.5">Última sesión</th>
-                <th className="px-4 py-3.5 text-center">Acciones rápidas</th>
-                <th className="px-4 py-3.5 text-right">Detalle</th>
+                <th className="px-4 py-3.5 text-right">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -364,85 +354,95 @@ export default function DevicesPage() {
                 const isSelected = selectedIds.has(d.id);
                 const isOnline = d.lastSeenAt && now - d.lastSeenAt < 35000;
                 return (
-                  <tr key={d.id} className={`hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-blue-50/40' : ''}`}>
+                  <tr
+                    key={d.id}
+                    className={`transition-colors ${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50/60'}`}
+                  >
+                    {/* Checkbox column */}
                     <td className="px-4 py-3.5 text-center">
                       {d.state !== 'revoked' && hasPermission('devices.authorize') ? (
-                        <button type="button" onClick={() => toggleSelect(d.id)} className="align-middle text-slate-500 hover:text-slate-900">
-                          {isSelected ? <CheckSquare size={18} className="text-blue-700" /> : <Square size={18} className="text-slate-300" />}
+                        <button
+                          type="button"
+                          onClick={() => toggleSelect(d.id)}
+                          className="align-middle text-slate-300 hover:text-blue-700 transition"
+                        >
+                          {isSelected ? <CheckSquare size={18} className="text-blue-700" /> : <Square size={18} />}
                         </button>
                       ) : null}
                     </td>
+
+                    {/* Owner column */}
                     <td className="px-4 py-3.5">
-                      <p className="font-bold text-slate-900">{d.owner}</p>
-                      <p className="text-xs text-slate-400">{d.alias || 'Sin alias'}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="font-medium text-slate-700">{d.metadata.manufacturer} {d.metadata.model}</p>
-                      <p className="text-xs text-slate-400">Android {d.metadata.android} · {d.metadata.width}x{d.metadata.height}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <StateBadge device={d} now={now} />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        {isOnline ? (
-                          <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Activo
-                          </span>
-                        ) : (
-                          <span>{date(d.lastSeenAt)}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      {hasPermission('devices.authorize') && (
-                        <div className="inline-flex justify-center gap-1.5">
-                          {d.state !== 'revoked' && d.state !== 'enabled' && (
-                            <button
-                              className={`${btnBase} border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}
-                              disabled={!!quickBusy || bulkBusy}
-                              onClick={() => quickChange(d.id, 'enabled')}
-                              title="Habilitar"
-                            >
-                              {quickBusy === d.id ? '…' : <span className="flex items-center gap-1"><CheckCircle2 size={13} />Habilitar</span>}
-                            </button>
-                          )}
-                          {d.state === 'enabled' && (
-                            <button
-                              className={`${btnBase} border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100`}
-                              disabled={!!quickBusy || bulkBusy}
-                              onClick={() => quickChange(d.id, 'suspended')}
-                              title="Suspender"
-                            >
-                              {quickBusy === d.id ? '…' : <span className="flex items-center gap-1"><PauseCircle size={13} />Suspender</span>}
-                            </button>
-                          )}
-                          {d.state !== 'revoked' && (
-                            <button
-                              className={`${btnBase} border-red-200 bg-red-50 text-red-600 hover:bg-red-100`}
-                              disabled={!!quickBusy || bulkBusy}
-                              onClick={() => {
-                                if (window.confirm(`Revocar ${d.alias || d.owner} exigirá una nueva vinculación. ¿Continuar?`)) {
-                                  quickChange(d.id, 'revoked');
-                                }
-                              }}
-                              title="Revocar"
-                            >
-                              <XCircle size={13} />
-                            </button>
-                          )}
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs uppercase shrink-0">
+                          {d.owner.charAt(0) || 'D'}
                         </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-sm leading-snug">{d.owner}</p>
+                          <p className="text-xs text-slate-400">{d.alias || 'Sin alias registrado'}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Device column */}
+                    <td className="px-4 py-3.5">
+                      <p className="font-medium text-slate-800 text-sm">{d.metadata.manufacturer} {d.metadata.model}</p>
+                      <p className="text-xs text-slate-400">Android {d.metadata.android} · {d.metadata.width}×{d.metadata.height}</p>
+                    </td>
+
+                    {/* State column */}
+                    <td className="px-4 py-3.5">
+                      <StateBadge device={d} now={now} />
+                    </td>
+
+                    {/* Last session column */}
+                    <td className="px-4 py-3.5 text-xs text-slate-500">
+                      {isOnline ? (
+                        <span className="flex items-center gap-1.5 font-bold text-emerald-600">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                          En línea ahora
+                        </span>
+                      ) : (
+                        <span>{date(d.lastSeenAt)}</span>
                       )}
                     </td>
+
+                    {/* Action column (Right-aligned, single clean button group) */}
                     <td className="px-4 py-3.5 text-right">
-                      <button
-                        className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
-                        onClick={() => openDevice(d)}
-                      >
-                        Ver
-                      </button>
+                      <div className="inline-flex items-center gap-1.5">
+                        {hasPermission('devices.authorize') && d.state !== 'revoked' && (
+                          <>
+                            {d.state !== 'enabled' ? (
+                              <button
+                                className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition shadow-2xs"
+                                disabled={!!quickBusy || bulkBusy}
+                                onClick={() => quickChange(d.id, 'enabled')}
+                                title="Habilitar equipo"
+                              >
+                                <CheckCircle2 size={14} />
+                                <span>{quickBusy === d.id ? '…' : 'Habilitar'}</span>
+                              </button>
+                            ) : (
+                              <button
+                                className="inline-flex items-center gap-1 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-100 active:scale-95 transition shadow-2xs"
+                                disabled={!!quickBusy || bulkBusy}
+                                onClick={() => quickChange(d.id, 'suspended')}
+                                title="Suspender equipo"
+                              >
+                                <PauseCircle size={14} />
+                                <span>{quickBusy === d.id ? '…' : 'Suspender'}</span>
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <button
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-2xs"
+                          onClick={() => openDevice(d)}
+                        >
+                          Detalles
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -451,7 +451,7 @@ export default function DevicesPage() {
           </table>
         </div>
 
-        {/* ── Mobile & Tablet Responsive Cards (visible below lg breakpoint) ── */}
+        {/* ── MOBILE & TABLET VIEW: Minimalist, Uncluttered Cards ───── */}
         <div className="block lg:hidden divide-y divide-slate-100">
           {devices.map(d => {
             const isSelected = selectedIds.has(d.id);
@@ -459,96 +459,78 @@ export default function DevicesPage() {
             return (
               <div
                 key={d.id}
-                className={`p-3.5 transition-colors ${isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/50'}`}
+                className={`p-4 transition-colors ${isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/40'}`}
               >
-                {/* Header row: Checkbox, Owner, StateBadge */}
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                {/* Top Row: Checkbox + Owner + Badge */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
                     {d.state !== 'revoked' && hasPermission('devices.authorize') && (
                       <button
                         type="button"
                         onClick={() => toggleSelect(d.id)}
-                        className="mt-0.5 text-slate-400 hover:text-slate-800"
+                        className="mt-0.5 text-slate-300 hover:text-blue-700 transition"
                         aria-label={`Seleccionar ${d.owner}`}
                       >
-                        {isSelected ? <CheckSquare size={19} className="text-blue-700" /> : <Square size={19} />}
+                        {isSelected ? <CheckSquare size={20} className="text-blue-700" /> : <Square size={20} />}
                       </button>
                     )}
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate">{d.owner}</p>
-                      <p className="text-xs text-slate-400 truncate">{d.alias || 'Sin alias'}</p>
+
+                    <div className="min-w-0 cursor-pointer" onClick={() => openDevice(d)}>
+                      <p className="font-bold text-slate-900 text-sm truncate">{d.owner}</p>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{d.alias || 'Sin alias'}</p>
                     </div>
                   </div>
+
                   <StateBadge device={d} now={now} />
                 </div>
 
-                {/* Device Info & Online Status */}
-                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-y-1 text-xs text-slate-500 bg-slate-50 rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <Smartphone size={14} className="text-slate-400 shrink-0" />
-                    <span className="font-medium text-slate-700">{d.metadata.manufacturer} {d.metadata.model}</span>
-                    <span className="text-slate-300">·</span>
-                    <span>Android {d.metadata.android}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {isOnline ? (
-                      <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Conectado
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Clock size={12} /> {d.lastSeenAt ? date(d.lastSeenAt).split(',')[1] || date(d.lastSeenAt) : 'Sin sesión'}
-                      </span>
-                    )}
-                  </div>
+                {/* Subtitle Info: Device model and status */}
+                <div
+                  className="mt-2 flex items-center justify-between text-xs text-slate-500 cursor-pointer pl-8"
+                  onClick={() => openDevice(d)}
+                >
+                  <span className="truncate">{d.metadata.manufacturer} {d.metadata.model}</span>
+                  {isOnline ? (
+                    <span className="font-bold text-emerald-600 shrink-0 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> En línea
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 shrink-0 text-[11px]">
+                      {d.lastSeenAt ? date(d.lastSeenAt).split(',')[1] || date(d.lastSeenAt) : 'Sin sesión'}
+                    </span>
+                  )}
                 </div>
 
-                {/* Action Buttons: Full touch targets */}
-                <div className="mt-3 flex items-center gap-2">
-                  {hasPermission('devices.authorize') && d.state !== 'revoked' && (
-                    <>
-                      {d.state !== 'enabled' ? (
-                        <button
-                          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 py-2 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:scale-[0.98] transition disabled:opacity-50"
-                          disabled={!!quickBusy || bulkBusy}
-                          onClick={() => quickChange(d.id, 'enabled')}
-                        >
-                          <CheckCircle2 size={15} />
-                          {quickBusy === d.id ? 'Habilitando…' : 'Habilitar'}
-                        </button>
-                      ) : (
-                        <button
-                          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 py-2 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 active:scale-[0.98] transition disabled:opacity-50"
-                          disabled={!!quickBusy || bulkBusy}
-                          onClick={() => quickChange(d.id, 'suspended')}
-                        >
-                          <PauseCircle size={15} />
-                          {quickBusy === d.id ? 'Suspendiendo…' : 'Suspender'}
-                        </button>
-                      )}
-
+                {/* Bottom Row: ONE primary action button + tap to view details */}
+                <div className="mt-3.5 flex items-center gap-2 pl-8">
+                  {hasPermission('devices.authorize') && d.state !== 'revoked' ? (
+                    d.state !== 'enabled' ? (
                       <button
-                        className="rounded-xl border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100 active:scale-[0.98] transition disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700 active:scale-98 transition"
                         disabled={!!quickBusy || bulkBusy}
-                        onClick={() => {
-                          if (window.confirm(`¿Revocar acceso a ${d.alias || d.owner}?`)) {
-                            quickChange(d.id, 'revoked');
-                          }
-                        }}
-                        title="Revocar acceso"
-                        aria-label="Revocar acceso"
+                        onClick={() => quickChange(d.id, 'enabled')}
                       >
-                        <XCircle size={17} />
+                        <CheckCircle2 size={14} />
+                        <span>{quickBusy === d.id ? 'Habilitando…' : 'Habilitar equipo'}</span>
                       </button>
-                    </>
-                  )}
+                    ) : (
+                      <button
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 py-2 text-xs font-bold text-amber-800 shadow-2xs hover:bg-amber-100 active:scale-98 transition"
+                        disabled={!!quickBusy || bulkBusy}
+                        onClick={() => quickChange(d.id, 'suspended')}
+                      >
+                        <PauseCircle size={14} />
+                        <span>{quickBusy === d.id ? 'Suspendiendo…' : 'Suspender equipo'}</span>
+                      </button>
+                    )
+                  ) : null}
 
                   <button
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-[0.98] transition"
+                    className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
                     onClick={() => openDevice(d)}
                   >
-                    Detalles
+                    <span>Ver</span>
+                    <ChevronRight size={14} className="text-slate-400" />
                   </button>
                 </div>
               </div>
@@ -560,15 +542,15 @@ export default function DevicesPage() {
         {!devices.length && (
           <div className="p-8 text-center text-slate-500 sm:p-12">
             <Smartphone className="mx-auto mb-2 text-slate-300" size={36} />
-            <p className="font-medium">{loading ? 'Consultando dispositivos…' : 'No hay dispositivos registrados con este filtro.'}</p>
+            <p className="font-medium text-sm text-slate-600">{loading ? 'Consultando dispositivos…' : 'No hay dispositivos registrados con este filtro.'}</p>
           </div>
         )}
 
         {/* Pagination cursor */}
         {cursor && (
-          <div className="p-4 text-center border-t border-slate-100">
+          <div className="p-4 text-center border-t border-slate-100 bg-slate-50/50">
             <button
-              className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50 transition"
+              className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-50 transition"
               disabled={loading}
               onClick={() => void load(cursor)}
             >
@@ -578,21 +560,18 @@ export default function DevicesPage() {
         )}
       </section>
 
-      {/* ── Floating / Sticky Mass Actions Bar ──────────────────────── */}
+      {/* ── Sleek Floating Bulk Action Bar ─────────────────────────── */}
       {selectedIds.size > 0 && hasPermission('devices.authorize') && (
-        <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 z-40 max-w-xl animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-2xl bg-slate-900/95 text-white p-3.5 shadow-2xl backdrop-blur-md border border-white/10">
-            <div className="flex items-center justify-between sm:justify-start gap-2.5">
-              <div className="flex items-center gap-2">
-                <Layers size={17} className="text-blue-400" />
-                <span className="text-xs font-black tracking-wide sm:text-sm">
-                  {selectedIds.size} {selectedIds.size === 1 ? 'seleccionado' : 'seleccionados'}
-                </span>
-              </div>
+        <div className="fixed bottom-5 left-4 right-4 sm:left-auto sm:right-8 z-40 max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-slate-900/95 text-white px-4 py-3 shadow-2xl backdrop-blur-md border border-white/10">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-black">
+                {selectedIds.size}
+              </span>
               <button
                 type="button"
                 onClick={() => setSelectedIds(new Set())}
-                className="text-xs text-slate-400 hover:text-white underline sm:ml-2"
+                className="text-xs text-slate-400 hover:text-white underline"
               >
                 Limpiar
               </button>
@@ -600,34 +579,37 @@ export default function DevicesPage() {
 
             {bulkProgress ? (
               <div className="flex items-center gap-2 text-xs font-bold text-blue-300">
-                <RefreshCw size={14} className="animate-spin" />
-                <span>Procesando {bulkProgress.current} de {bulkProgress.total}…</span>
+                <RefreshCw size={13} className="animate-spin" />
+                <span>{bulkProgress.current} de {bulkProgress.total}…</span>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleBulkAction('enabled')}
                   disabled={bulkBusy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 active:scale-95 transition shadow-xs"
+                  className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 active:scale-95 transition"
                 >
-                  <CheckCircle2 size={14} /> Habilitar
+                  <CheckCircle2 size={13} />
+                  <span>Habilitar</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleBulkAction('suspended')}
                   disabled={bulkBusy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1 rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-500 active:scale-95 transition shadow-xs"
+                  className="flex items-center gap-1 rounded-xl bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-500 active:scale-95 transition"
                 >
-                  <PauseCircle size={14} /> Suspender
+                  <PauseCircle size={13} />
+                  <span>Suspender</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleBulkAction('revoked')}
                   disabled={bulkBusy}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1 rounded-xl bg-red-600/90 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 active:scale-95 transition shadow-xs"
+                  className="flex items-center gap-1 rounded-xl bg-red-600/90 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-500 active:scale-95 transition"
                 >
-                  <XCircle size={14} /> Revocar
+                  <XCircle size={13} />
+                  <span>Revocar</span>
                 </button>
               </div>
             )}
@@ -635,26 +617,27 @@ export default function DevicesPage() {
         </div>
       )}
 
-      {/* ── Modals: Responsive Bottom Sheet on Mobile / Centered Modal on Desktop ── */}
+      {/* ── Modals: Responsive Bottom Sheet / Centered Modal ─────────── */}
       {(pairOpen || selected) && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 backdrop-blur-xs">
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="device-dialog-title"
-            className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 sm:p-6 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 sm:p-6 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
           >
+            {/* Modal Header */}
             <div className="mb-4 flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <h2 id="device-dialog-title" className="text-lg sm:text-xl font-black text-slate-900">
                   {pairOpen ? 'Vincular teléfono' : selected?.owner}
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 mt-0.5">
                   {pairOpen ? 'Introduce el código que muestra la app en el celular.' : `${selected?.metadata.manufacturer} ${selected?.metadata.model}`}
                 </p>
               </div>
               <button
-                className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition"
+                className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 transition"
                 disabled={busy}
                 aria-label="Cerrar"
                 onClick={() => { setPairOpen(false); setSelected(null); setError(''); }}
@@ -669,7 +652,7 @@ export default function DevicesPage() {
               </div>
             )}
 
-            {/* Pair Form */}
+            {/* Pair Modal Form */}
             {pairOpen && (
               <form
                 className="space-y-4"
@@ -682,17 +665,17 @@ export default function DevicesPage() {
                     }
                     await api({ action: 'claim', code, owner, alias });
                     setPairOpen(false);
-                    setMessage('✓ Teléfono vinculado. Ahora puedes habilitarlo con el botón verde.');
+                    setMessage('✓ Teléfono vinculado correctamente.');
                     await load();
                   });
                 }}
               >
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-slate-700">
-                    Código de 6 caracteres del teléfono
+                    Código del teléfono
                     <input
                       autoFocus
-                      className={`${input} mt-1.5 font-mono text-center text-2xl uppercase tracking-[.3em] font-bold text-blue-700`}
+                      className={`${input} mt-1.5 font-mono text-center text-2xl uppercase tracking-[.3em] font-black text-blue-700`}
                       required
                       minLength={6}
                       maxLength={6}
@@ -704,41 +687,43 @@ export default function DevicesPage() {
                       placeholder="ABC234"
                     />
                   </label>
-                  <p className="mt-1 text-[11px] text-slate-400">Abre la app en el teléfono y acepta los permisos para ver el código.</p>
+                  <p className="mt-1.5 text-center text-xs text-slate-400">Introduce el código de 6 caracteres que muestra la app en el teléfono.</p>
                 </div>
 
                 {preview && (
-                  <div className="space-y-3 animate-in fade-in duration-200">
-                    <div className="rounded-xl bg-blue-50/80 border border-blue-100 p-3.5 text-xs text-blue-900">
-                      <div className="flex items-center gap-1.5 font-bold mb-1">
-                        <Link2 size={16} /> Dispositivo detectado
-                      </div>
-                      <p>{preview.metadata.manufacturer} {preview.metadata.model} · Android {preview.metadata.android}</p>
-                      <p className="text-[11px] text-blue-600 mt-1">Vence en: {date(preview.expiresAt)}</p>
+                  <div className="space-y-3 rounded-2xl bg-blue-50/70 border border-blue-100 p-3.5 text-xs text-blue-900 animate-in fade-in">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <Link2 size={16} className="text-blue-700" />
+                      <span>{preview.metadata.manufacturer} {preview.metadata.model}</span>
+                    </div>
+                    <p className="text-slate-600">Android {preview.metadata.android} · Pantalla: {preview.metadata.width}×{preview.metadata.height}</p>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mt-2">
+                        Nombre del propietario
+                        <input
+                          className={`${input} mt-1`}
+                          required
+                          maxLength={120}
+                          value={owner}
+                          onChange={e => setOwner(e.target.value)}
+                          placeholder="Ej. Juan Pérez"
+                        />
+                      </label>
                     </div>
 
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700">
-                      Nombre del propietario
-                      <input
-                        className={`${input} mt-1`}
-                        required
-                        maxLength={120}
-                        value={owner}
-                        onChange={e => setOwner(e.target.value)}
-                        placeholder="Ej. Juan Pérez (Coordinador)"
-                      />
-                    </label>
-
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700">
-                      Alias o identificación del teléfono (opcional)
-                      <input
-                        className={`${input} mt-1`}
-                        maxLength={80}
-                        value={alias}
-                        onChange={e => setAlias(e.target.value)}
-                        placeholder="Ej. Teléfono 01 - Zona Sur"
-                      />
-                    </label>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700">
+                        Alias del teléfono (opcional)
+                        <input
+                          className={`${input} mt-1`}
+                          maxLength={80}
+                          value={alias}
+                          onChange={e => setAlias(e.target.value)}
+                          placeholder="Ej. Teléfono 01"
+                        />
+                      </label>
+                    </div>
                   </div>
                 )}
 
@@ -751,7 +736,7 @@ export default function DevicesPage() {
               </form>
             )}
 
-            {/* Device Detail */}
+            {/* Device Detail Modal */}
             {selected && (
               <div className="space-y-4">
                 <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
@@ -759,14 +744,14 @@ export default function DevicesPage() {
                     <StateBadge device={selected} now={now} />
                     {selected.lastSeenAt && now - selected.lastSeenAt < 35000 && (
                       <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" /> En línea
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" /> En línea ahora
                       </span>
                     )}
                   </div>
 
                   <dl className="space-y-1.5 text-xs text-slate-600">
                     <div className="flex justify-between border-b border-slate-200/60 pb-1">
-                      <span className="text-slate-400">Última comunicación:</span>
+                      <span className="text-slate-400">Última sesión:</span>
                       <span className="font-medium text-slate-800">{date(selected.lastSeenAt)}</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-200/60 pb-1">
@@ -774,35 +759,24 @@ export default function DevicesPage() {
                       <span className="font-medium text-slate-800">{selected.metadata.manufacturer} {selected.metadata.model}</span>
                     </div>
                     <div className="flex justify-between border-b border-slate-200/60 pb-1">
-                      <span className="text-slate-400">Sistema operativo:</span>
+                      <span className="text-slate-400">Sistema:</span>
                       <span className="font-medium text-slate-800">Android {selected.metadata.android}</span>
                     </div>
                     <div className="flex justify-between pt-0.5">
-                      <span className="text-slate-400">ID criptográfico:</span>
-                      <span className="font-mono text-[10px] text-slate-500 truncate max-w-[200px]">{selected.id}</span>
+                      <span className="text-slate-400">ID:</span>
+                      <span className="font-mono text-[10px] text-slate-400 truncate max-w-[200px]">{selected.id}</span>
                     </div>
                   </dl>
-
-                  <button
-                    className="mt-3 w-full rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
-                    disabled={busy}
-                    onClick={() => void perform(async () => {
-                      const r = await api<{ device: Device }>({ action: 'detail', deviceId: selected.id });
-                      openDevice(r.device);
-                    })}
-                  >
-                    Actualizar estado
-                  </button>
                 </div>
 
-                {/* Direct quick action inside modal */}
+                {/* Direct Action inside modal */}
                 {hasPermission('devices.authorize') && selected.state !== 'revoked' && (
-                  <div className="rounded-2xl border border-slate-100 p-3.5 bg-white">
-                    <p className="mb-2 text-xs font-black uppercase text-slate-400 tracking-wider">Acción directa</p>
+                  <div className="rounded-2xl border border-slate-100 p-3.5 bg-white space-y-2">
+                    <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Control de acceso</p>
                     <div className="flex items-center gap-2">
                       {selected.state !== 'enabled' ? (
                         <button
-                          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition"
+                          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition"
                           disabled={busy}
                           onClick={async () => {
                             await quickChange(selected.id, 'enabled');
@@ -810,7 +784,8 @@ export default function DevicesPage() {
                             openDevice(r.device);
                           }}
                         >
-                          <CheckCircle2 size={15} /> Habilitar equipo
+                          <CheckCircle2 size={15} />
+                          <span>Habilitar equipo</span>
                         </button>
                       ) : (
                         <button
@@ -822,22 +797,23 @@ export default function DevicesPage() {
                             openDevice(r.device);
                           }}
                         >
-                          <PauseCircle size={15} /> Suspender equipo
+                          <PauseCircle size={15} />
+                          <span>Suspender equipo</span>
                         </button>
                       )}
 
                       <button
-                        className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-red-600 hover:bg-red-100 transition"
+                        className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-bold text-red-600 hover:bg-red-100 transition flex items-center gap-1"
                         disabled={busy}
                         onClick={async () => {
-                          if (window.confirm(`Revocar ${selected.alias || selected.owner} exigirá una nueva vinculación. ¿Continuar?`)) {
+                          if (window.confirm(`¿Revocar acceso permanentemente a ${selected.alias || selected.owner}? Exigirá vincularlo nuevamente.`)) {
                             await quickChange(selected.id, 'revoked');
                             setSelected(null);
                           }
                         }}
-                        title="Revocar permanentemente"
                       >
-                        <XCircle size={17} />
+                        <XCircle size={15} />
+                        <span>Revocar</span>
                       </button>
                     </div>
                   </div>
@@ -846,7 +822,7 @@ export default function DevicesPage() {
                 {/* Edit owner/alias */}
                 {hasPermission('devices.manage') && selected.state !== 'revoked' && (
                   <form
-                    className="space-y-3 rounded-2xl border border-slate-100 p-3.5 bg-white"
+                    className="space-y-2.5 rounded-2xl border border-slate-100 p-3.5 bg-white"
                     onSubmit={e => {
                       e.preventDefault();
                       void perform(async () => {
@@ -864,7 +840,7 @@ export default function DevicesPage() {
                       });
                     }}
                   >
-                    <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Modificar datos</p>
+                    <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Editar datos</p>
                     <input
                       className={input}
                       aria-label="Nombre del propietario"
@@ -872,7 +848,7 @@ export default function DevicesPage() {
                       onChange={e => setOwner(e.target.value)}
                       required
                       maxLength={120}
-                      placeholder="Propietario"
+                      placeholder="Nombre del propietario"
                     />
                     <input
                       className={input}
@@ -880,7 +856,7 @@ export default function DevicesPage() {
                       value={alias}
                       onChange={e => setAlias(e.target.value)}
                       maxLength={80}
-                      placeholder="Alias opcional"
+                      placeholder="Alias (opcional)"
                     />
                     <button
                       disabled={busy}
