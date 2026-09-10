@@ -35,6 +35,10 @@ export const PERMISSION_KEYS = [
   'users.view',
   'users.manage',
   'roles.manage',
+  'devices.view',
+  'devices.manage',
+  'devices.authorize',
+  'devices.audit',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -79,6 +83,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const PERMISSION_MODULES = [
+  { id: 'devices', label: 'Dispositivos Auto Clicker', view: 'devices.view', manage: 'devices.manage' },
   { id: 'calendar', label: 'Calendario operativo', view: 'calendar.view', manage: 'calendar.manage' },
   { id: 'volunteers', label: 'Voluntarios', view: 'volunteers.view', manage: 'volunteers.manage' },
   { id: 'electoral', label: 'Control electoral', view: 'electoral.view', manage: 'electoral.manage' },
@@ -123,10 +128,15 @@ export function normalizePermissions(role: UserRole, value: unknown): RolePermis
     if (normalized[module.manage]) normalized[module.view] = true;
   });
   normalized['roles.manage'] = false;
+  if (!normalized['devices.view']) {
+    normalized['devices.authorize'] = false;
+    normalized['devices.audit'] = false;
+  }
   return normalized;
 }
 
 export function permissionForDashboardPath(pathname: string): PermissionKey {
+  if (pathname.startsWith('/dashboard/dispositivos')) return 'devices.view';
   if (pathname.startsWith('/dashboard/calendario')) return 'calendar.view';
   if (pathname.startsWith('/dashboard/control-electoral')) return 'electoral.view';
   if (pathname.startsWith('/dashboard/digitacion')) return 'actas.view';

@@ -56,6 +56,11 @@ export function RolePermissionsPanel() {
   const toggle = (permission: keyof RolePermissions, enabled: boolean) => {
     if (!roles) return;
     const next = { ...roles[selectedRole], [permission]: enabled };
+    if (permission === 'devices.view' && !enabled) {
+      next['devices.authorize'] = false;
+      next['devices.audit'] = false;
+    }
+    if ((permission === 'devices.authorize' || permission === 'devices.audit') && enabled) next['devices.view'] = true;
     const moduleConfig = PERMISSION_MODULES.find(
       (entry) => entry.view === permission || entry.manage === permission,
     );
@@ -152,6 +157,12 @@ export function RolePermissionsPanel() {
 
         {message && <p role="status" className={`mt-4 rounded-xl border p-3 text-sm font-semibold ${message.error ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'}`}>{message.text}</p>}
 
+        {!loading && <div className="mt-4 flex flex-wrap gap-5 rounded-xl border border-slate-200 p-4">
+          {(['devices.authorize', 'devices.audit'] as const).map((permission) => <label key={permission} className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" checked={current[permission]} onChange={(event) => toggle(permission, event.target.checked)} />
+            {permission === 'devices.authorize' ? 'Habilitar, suspender y revocar dispositivos' : 'Consultar historial de dispositivos'}
+          </label>)}
+        </div>}
         <div className="mt-6 flex justify-end">
           <button type="button" onClick={save} disabled={saving || loading || !roles} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50">
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Guardar permisos

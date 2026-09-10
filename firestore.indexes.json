@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    { "collectionGroup": "autoClickerDevices", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
+      { "fieldPath": "state", "order": "ASCENDING" }
+    ] }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "autoClickerChallenges", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "autoClickerPairings", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "autoClickerInstallations", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "autoClickerRateLimits", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
+  ]
+}

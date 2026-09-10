@@ -1,0 +1,1099 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Karen Auto Clicker API",
+    "version": "1.0.0",
+    "description": "All times are Unix milliseconds. All calls use POST and JSON. Mobile commands require a new single-use signed challenge each time. These routes do not start gestures remotely."
+  },
+  "servers": [
+    {
+      "url": "https://karenacevedo.com"
+    }
+  ],
+  "paths": {
+    "/api/autoclicker/device/challenge": {
+      "post": {
+        "summary": "Create a challenge (60 seconds); rate limited",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success (including allowed:false; callers MUST inspect allowed before running)",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing session / invalid signature / expired or used challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role permission missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown resource or pairing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Consumed code, stale version, revoked identity or operation conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; Retry-After: 60",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/autoclicker/device/command": {
+      "post": {
+        "summary": "Execute a signed MobileCommand",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success (including allowed:false; callers MUST inspect allowed before running)",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Lease"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Denied"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Registration"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Status"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stopped": {
+                          "const": true
+                        },
+                        "state": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "stopped",
+                        "state"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing session / invalid signature / expired or used challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role permission missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown resource or pairing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Consumed code, stale version, revoked identity or operation conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; Retry-After: 60",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/autoclicker/admin": {
+      "post": {
+        "summary": "Dashboard operations: list/detail=view; preview/claim/edit=manage; authorize=authorize; audit=audit",
+        "security": [
+          {
+            "firebase": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success (including allowed:false; callers MUST inspect allowed before running)",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "devices": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Device"
+                          }
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "devices",
+                        "nextCursor"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "device": {
+                          "$ref": "#/components/schemas/Device"
+                        }
+                      },
+                      "required": [
+                        "device"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "metadata": {
+                          "$ref": "#/components/schemas/Metadata"
+                        },
+                        "expiresAt": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "metadata",
+                        "expiresAt"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "events": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Audit"
+                          }
+                        },
+                        "nextCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "events",
+                        "nextCursor"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing session / invalid signature / expired or used challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role permission missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown resource or pairing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Consumed code, stale version, revoked identity or operation conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; Retry-After: 60",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "firebase": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Firebase ID Token"
+      }
+    },
+    "schemas": {
+      "Metadata": {
+        "type": "object",
+        "properties": {
+          "manufacturer": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "android": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "appVersion": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000
+          }
+        },
+        "required": [
+          "manufacturer",
+          "model",
+          "android",
+          "appVersion",
+          "width",
+          "height"
+        ]
+      },
+      "ChallengeRequest": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "description": "EC P-256 public key, DER SPKI, standard Base64",
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "publicKey"
+        ]
+      },
+      "ChallengeResponse": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "expiresInMs": {
+            "type": "integer",
+            "const": 60000
+          }
+        },
+        "required": [
+          "challengeId",
+          "nonce",
+          "deviceId",
+          "expiresInMs"
+        ]
+      },
+      "SignedCommand": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "payload": {
+            "type": "string",
+            "maxLength": 8000,
+            "description": "Exact JSON string of MobileCommand. Sign UTF-8 karen-autoclicker-v1\\n{challengeId}\\n{nonce}\\n{SHA256(payload) lowercase hex}. Do not reserialize between signing and sending."
+          },
+          "signature": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "SHA256withECDSA signature, DER, standard Base64."
+          }
+        },
+        "required": [
+          "challengeId",
+          "payload",
+          "signature"
+        ]
+      },
+      "MobileCommand": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "pair"
+              },
+              "metadata": {
+                "$ref": "#/components/schemas/Metadata"
+              }
+            },
+            "required": [
+              "action",
+              "metadata"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "status",
+                  "start"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "renew"
+              },
+              "sessionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "action",
+              "sessionId",
+              "version"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "stop"
+              },
+              "sessionId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "action",
+              "sessionId"
+            ]
+          }
+        ]
+      },
+      "Lease": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "const": true
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "durationMs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30000
+          },
+          "serverTime": {
+            "type": "integer"
+          },
+          "expiresAt": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "allowed",
+          "sessionId",
+          "version",
+          "durationMs",
+          "serverTime",
+          "expiresAt"
+        ]
+      },
+      "Denied": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "const": false
+          },
+          "reason": {
+            "type": "string"
+          },
+          "serverTime": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "allowed",
+          "reason",
+          "serverTime"
+        ]
+      },
+      "Registration": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "state": {
+            "const": "pending"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$"
+          },
+          "expiresAt": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deviceId",
+          "state",
+          "code",
+          "expiresAt"
+        ]
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "disabled",
+              "enabled",
+              "suspended",
+              "revoked"
+            ]
+          },
+          "owner": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pairingExpiresAt": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "serverTime": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deviceId",
+          "state",
+          "serverTime"
+        ]
+      },
+      "Device": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "disabled",
+              "enabled",
+              "suspended",
+              "revoked"
+            ]
+          },
+          "version": {
+            "type": "integer"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "expiresAt": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          },
+          "lastSeenAt": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "leaseExpiresAt": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reportedState": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "alias",
+          "state",
+          "version",
+          "metadata",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+          "lastSeenAt",
+          "leaseExpiresAt",
+          "reportedState"
+        ]
+      },
+      "AdminCommand": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "list"
+              },
+              "search": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "state": {
+                "enum": [
+                  "",
+                  "disabled",
+                  "enabled",
+                  "suspended",
+                  "revoked"
+                ]
+              },
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "enum": [
+                  "detail",
+                  "audit"
+                ]
+              },
+              "deviceId": {
+                "type": "string"
+              },
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "action",
+              "deviceId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "preview"
+              },
+              "code": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 6
+              }
+            },
+            "required": [
+              "action",
+              "code"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "claim"
+              },
+              "code": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "alias": {
+                "type": "string",
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "action",
+              "code",
+              "owner"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "edit"
+              },
+              "deviceId": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "operationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "alias": {
+                "type": "string",
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "action",
+              "deviceId",
+              "version",
+              "operationId",
+              "owner"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "authorize"
+              },
+              "deviceId": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "operationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "state": {
+                "enum": [
+                  "enabled",
+                  "suspended",
+                  "revoked"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "expiresAt": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Future Unix time in milliseconds when enabling; null = no administrative expiry."
+              }
+            },
+            "required": [
+              "action",
+              "deviceId",
+              "version",
+              "operationId",
+              "state",
+              "reason"
+            ]
+          }
+        ]
+      },
+      "Audit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "before": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "after": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "actor",
+          "reason",
+          "createdAt",
+          "before",
+          "after"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  }
+}

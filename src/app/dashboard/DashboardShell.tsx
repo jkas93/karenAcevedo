@@ -15,6 +15,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  Smartphone,
   Users,
   X,
 } from 'lucide-react';
@@ -47,6 +48,7 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
+  { href: '/dashboard/dispositivos', label: 'Dispositivos Auto Clicker', permission: 'devices.view', icon: Smartphone, matches: (path) => path.startsWith('/dashboard/dispositivos') },
   { href: '/dashboard/calendario', label: 'Calendario operativo', permission: 'calendar.view', icon: CalendarDays, matches: (path) => path.startsWith('/dashboard/calendario') },
   { href: '/dashboard', label: 'Voluntarios', permission: 'volunteers.view', icon: Users, matches: (path) => path === '/dashboard' },
   { href: '/dashboard/control-electoral', label: 'Control Electoral', permission: 'electoral.view', icon: Map, matches: (path) => path.startsWith('/dashboard/control-electoral') },
@@ -57,6 +59,8 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 const MODULE_LABELS: Record<PermissionKey, string> = {
+  'devices.view': 'Dispositivos Auto Clicker', 'devices.manage': 'Dispositivos Auto Clicker',
+  'devices.authorize': 'Autorización de dispositivos', 'devices.audit': 'Historial de dispositivos',
   'calendar.view': 'Calendario operativo', 'calendar.manage': 'Calendario operativo',
   'volunteers.view': 'Voluntarios', 'volunteers.manage': 'Voluntarios',
   'electoral.view': 'Control electoral', 'electoral.manage': 'Control electoral',

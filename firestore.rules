@@ -261,6 +261,8 @@ service cloud.firestore {
     }
 
     match /{document=**} {
+      // Auto Clicker collections (including nested audit) are server-only.
+      // Firebase Admin operations enforce permissions in /api/autoclicker.
       allow read, write: if false;
     }
   }
