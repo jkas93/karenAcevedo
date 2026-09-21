@@ -31,6 +31,7 @@ export default function Footer() {
               <li><Link href="/karen" className="text-white font-medium hover:text-[#ffcc00] transition-colors">Conoce a Karen</Link></li>
               <li><Link href="/plan" className="text-white font-medium hover:text-[#ffcc00] transition-colors">Plan de Gobierno</Link></li>
               <li><Link href="/movimiento" className="text-white font-medium hover:text-[#ffcc00] transition-colors">El Movimiento</Link></li>
+              <li><Link href="/consulta" className="text-white font-medium hover:text-[#ffcc00] transition-colors flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>Consulta Electoral ONPE</Link></li>
             </ul>
           </div>
 
