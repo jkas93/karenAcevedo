@@ -19,8 +19,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Sparkles,
-  Smartphone,
-  Info,
+  Vote,
+  CheckCircle2,
 } from 'lucide-react';
 
 const ONPE_OFFICIAL_URL = 'https://consultaelectoral.onpe.gob.pe/inicio';
@@ -93,7 +93,6 @@ export default function ConsultaElectoralClient() {
       showToast('Abriendo consulta oficial de la ONPE...');
     }
 
-    // Centrado de ventana inteligente (1050x760 en desktop, o popup/nueva pestaña)
     const width = 1050;
     const height = 760;
     const left = typeof window !== 'undefined' ? Math.max(0, (window.screen.width - width) / 2) : 100;
@@ -101,7 +100,6 @@ export default function ConsultaElectoralClient() {
     const features = `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no`;
 
     try {
-      // Intentar abrir como ventana emergente (popup)
       const popup = window.open(ONPE_OFFICIAL_URL, 'ConsultaElectoralONPE', features);
       if (!popup || popup.closed || typeof popup.closed === 'undefined') {
         window.open(ONPE_OFFICIAL_URL, '_blank');
@@ -115,7 +113,7 @@ export default function ConsultaElectoralClient() {
 
   const handleShareWhatsApp = () => {
     const url = typeof window !== 'undefined' ? window.location.href : 'https://karenacevedo.com/consulta';
-    const text = `🇵🇪 *Consulta tu Local de Votación y si eres Miembro de Mesa (ONPE)*:\n\nIngresa tu DNI de forma fácil aquí 👉 ${url}\n\nConoce además las propuestas de Karen Acevedo para el desarrollo y seguridad de Chaclacayo.`;
+    const text = `🇵🇪 *Consulta tu Local de Votación y Miembro de Mesa (ONPE)*:\n\nIngresa tu DNI aquí 👉 ${url}\n\n🗳️ Recuerda: En estas elecciones ¡Marca los 2 símbolos! (Provincial y Distrital) por Chaclacayo.`;
     const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
   };
@@ -153,7 +151,7 @@ export default function ConsultaElectoralClient() {
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 min-h-screen overflow-x-hidden">
-      {/* Toast Notification Flotante Inteligente para Móvil y Desktop */}
+      {/* Toast Notification Flotante Inteligente */}
       {toastMessage && (
         <div
           role="alert"
@@ -169,7 +167,7 @@ export default function ConsultaElectoralClient() {
           <button
             type="button"
             onClick={() => setToastMessage(null)}
-            className="text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded"
+            className="text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded cursor-pointer"
           >
             ✕
           </button>
@@ -177,7 +175,7 @@ export default function ConsultaElectoralClient() {
       )}
 
       {/* ── HERO SECTION & FORMULARIO ASISTIDO ── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#061426] via-[#0b1f38] to-[#0f2744] text-white pt-6 pb-14 sm:py-16 md:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#061426] via-[#0b1f38] to-[#0f2744] text-white pt-6 pb-14 sm:py-16 md:py-20">
         {/* Glow de fondo decorativo */}
         <div className="absolute inset-0 pointer-events-none opacity-25">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[320px] sm:w-[600px] h-[300px] bg-[#0070C0] blur-[100px] sm:blur-[140px] rounded-full" />
@@ -202,7 +200,7 @@ export default function ConsultaElectoralClient() {
             </p>
           </div>
 
-          {/* Caja de consulta principal optimizada para celular */}
+          {/* Caja de consulta principal */}
           <div className="max-w-xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-200 text-slate-900">
             <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch">
               <div className="relative flex-grow">
@@ -237,7 +235,7 @@ export default function ConsultaElectoralClient() {
               </button>
             </div>
 
-            {/* Microinstrucción y estado para mobile */}
+            {/* Microinstrucción y estado */}
             <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] sm:text-xs text-slate-500 gap-2">
               <div className="flex items-center gap-1.5 leading-snug">
                 <ShieldCheck className="w-4 h-4 text-[#0070C0] shrink-0" />
@@ -251,8 +249,16 @@ export default function ConsultaElectoralClient() {
             </div>
           </div>
 
-          {/* Módulo de Compartir en Redes (Táctil amigable) */}
-          <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          {/* Recordatorio cívico de voto dual en el Hero */}
+          <div className="mt-5 max-w-xl mx-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-center text-xs text-slate-200">
+            <Vote className="w-4 h-4 text-[#ffcc00] shrink-0" />
+            <span>
+              En tu cédula municipal votas por dos cargos: <strong className="text-white">Provincial (Lima)</strong> y <strong className="text-[#ffcc00]">Distrital (Chaclacayo)</strong>.
+            </span>
+          </div>
+
+          {/* Módulo de Compartir en Redes */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
             <span className="w-full sm:w-auto text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1 sm:mb-0 flex items-center justify-center gap-1.5">
               <Share2 className="w-3.5 h-3.5" /> Compartir con vecinos:
             </span>
@@ -289,51 +295,186 @@ export default function ConsultaElectoralClient() {
         </div>
       </section>
 
-      {/* ── BANNER PUBLICITARIO CAMPAÑA KAREN ACEVEDO (100% Mobile Responsive) ── */}
-      <section className="bg-gradient-to-r from-[#004f8a] via-[#0070C0] to-[#041c3a] text-white py-6 sm:py-8 border-y-4 border-[#ffcc00] shadow-md">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start lg:items-center justify-between gap-5 text-center sm:text-left">
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-              {/* Foto de Karen */}
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-3 border-[#ffcc00] shadow-xl shrink-0 bg-white/10">
-                <Image
-                  src="/karen-oficial.webp"
-                  alt="Karen Acevedo - Candidata Alcaldía Chaclacayo"
-                  fill
-                  sizes="96px"
-                  className="object-cover object-top"
-                />
+      {/* ── BANNER ELECTORAL: RESALTADO DEL SÍMBOLO (PROVINCIAL Y DISTRITAL) ── */}
+      <section className="bg-gradient-to-br from-[#041c3a] via-[#003d72] to-[#005a9c] text-white py-8 sm:py-12 border-y-4 border-[#ffcc00] shadow-xl relative overflow-hidden">
+        {/* Marca de agua decorativa */}
+        <div className="absolute right-[-40px] top-1/2 -translate-y-1/2 w-80 h-80 opacity-5 pointer-events-none">
+          <Image src="/brazo.png" alt="" fill className="object-contain" />
+        </div>
+
+        <div className="container mx-auto px-4 max-w-5xl relative z-10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            
+            {/* Columna Izquierda: Información de Campaña */}
+            <div className="flex-1 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/30 border border-[#ffcc00]/40 text-[#ffcc00] text-xs font-bold uppercase tracking-wider mb-3">
+                <Sparkles className="w-3.5 h-3.5 text-[#ffcc00]" />
+                Elecciones Municipales · Fuerza Ciudadana
               </div>
 
-              <div>
-                <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs uppercase tracking-wider font-bold text-[#ffcc00] bg-black/30 px-2.5 py-0.5 rounded-full mb-1">
-                  <Sparkles className="w-3 h-3 text-[#ffcc00]" /> Fuerza Ciudadana Chaclacayo 2027
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-black text-white leading-tight mb-3">
+                ¡En estas elecciones, <span className="text-[#ffcc00]">marca los 2 símbolos!</span>
+              </h2>
+
+              <p className="text-xs sm:text-sm text-slate-100 max-w-xl mx-auto lg:mx-0 leading-relaxed mb-6">
+                Para que Chaclacayo cuente con obras de envergadura, protección de quebradas y seguridad coordinada, vota en línea recta: marca el símbolo por <strong className="text-white underline decoration-[#ffcc00] underline-offset-4">Lima Provincial</strong> y por <strong className="text-white underline decoration-[#ffcc00] underline-offset-4">Chaclacayo Distrital</strong>.
+              </p>
+
+              {/* Botones de acción */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                <Link
+                  href="/plan"
+                  className="bg-[#ffcc00] hover:bg-yellow-300 text-[#041c3a] active:scale-95 font-heading font-bold px-6 py-3 rounded-full text-xs sm:text-sm shadow-lg transition-all flex items-center gap-2"
+                >
+                  <span>Ver Plan de Gobierno</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/karen"
+                  className="bg-white/10 hover:bg-white/20 border border-white/30 text-white font-heading font-semibold px-5 py-3 rounded-full text-xs sm:text-sm transition-all"
+                >
+                  Conoce a Karen
+                </Link>
+              </div>
+            </div>
+
+            {/* Columna Derecha: SIMULACIÓN DE CÉDULA CON LOS 2 SÍMBOLOS */}
+            <div className="w-full lg:w-auto shrink-0 flex flex-col items-center">
+              <div className="text-center mb-3">
+                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-[#ffcc00] bg-black/40 px-3 py-1 rounded-full border border-white/15">
+                  Simulación de tu Cédula de Votación
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-md sm:max-w-lg">
+                
+                {/* 1. Recuadro PROVINCIAL (Lima) */}
+                <div className="bg-white rounded-2xl p-3 sm:p-4 text-slate-900 shadow-2xl border-2 border-slate-300 flex flex-col items-center text-center relative group hover:border-[#0070C0] transition-all">
+                  <div className="w-full bg-[#041c3a] text-white py-1 px-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider mb-2">
+                    1. PROVINCIAL
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight mb-2">
+                    Lima Metropolitana
+                  </span>
+
+                  {/* Casilla de votación con el símbolo y la cruz roja oficial */}
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-xl border-2 border-dashed border-slate-400 flex items-center justify-center p-2 shadow-inner">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src="/brazo.png"
+                        alt="Símbolo Provincial"
+                        fill
+                        className="object-contain"
+                        sizes="96px"
+                      />
+                    </div>
+
+                    {/* Aspa / Cruz roja electoral sobreimpresa */}
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md"
+                      aria-label="Voto marcado"
+                    >
+                      <line
+                        x1="12"
+                        y1="12"
+                        x2="88"
+                        y2="88"
+                        stroke="#dc2626"
+                        strokeWidth="11"
+                        strokeLinecap="round"
+                      />
+                      <line
+                        x1="88"
+                        y1="12"
+                        x2="12"
+                        y2="88"
+                        stroke="#dc2626"
+                        strokeWidth="11"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 w-full">
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Marca aquí
+                    </span>
+                  </div>
                 </div>
-                <h3 className="text-lg sm:text-2xl md:text-3xl font-heading font-black text-white leading-tight">
-                  Este día cívico, elige un <span className="text-[#ffcc00]">Chaclacayo Seguro y Ordenado</span>
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-100 max-w-xl mt-1 leading-relaxed">
-                  Conoce a Karen Acevedo y las propuestas técnicas para proteger nuestras quebradas, modernizar serenazgo y ordenar el distrito.
-                </p>
+
+                {/* 2. Recuadro DISTRITAL (Chaclacayo - Karen Acevedo) */}
+                <div className="bg-white rounded-2xl p-3 sm:p-4 text-slate-900 shadow-2xl border-2 border-[#ffcc00] flex flex-col items-center text-center relative group hover:border-[#0070C0] transition-all ring-2 ring-[#ffcc00]/50">
+                  <div className="w-full bg-[#0070C0] text-white py-1 px-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider mb-2">
+                    2. DISTRITAL
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-bold text-[#0070C0] uppercase tracking-tight mb-2">
+                    Chaclacayo
+                  </span>
+
+                  {/* Casilla de votación con el símbolo y la cruz roja oficial + mini foto Karen */}
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-xl border-2 border-dashed border-[#0070C0] flex items-center justify-center p-2 shadow-inner">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src="/brazo.png"
+                        alt="Símbolo Distrital Karen Acevedo"
+                        fill
+                        className="object-contain"
+                        sizes="96px"
+                      />
+                    </div>
+
+                    {/* Aspa / Cruz roja electoral sobreimpresa */}
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="absolute inset-0 w-full h-full pointer-events-none drop-shadow-md"
+                      aria-label="Voto marcado"
+                    >
+                      <line
+                        x1="12"
+                        y1="12"
+                        x2="88"
+                        y2="88"
+                        stroke="#dc2626"
+                        strokeWidth="11"
+                        strokeLinecap="round"
+                      />
+                      <line
+                        x1="88"
+                        y1="12"
+                        x2="12"
+                        y2="88"
+                        stroke="#dc2626"
+                        strokeWidth="11"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+
+                    {/* Foto insignia de Karen Acevedo en esquina */}
+                    <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-[#ffcc00] shadow-md bg-white">
+                      <Image
+                        src="/karen-oficial.webp"
+                        alt="Karen Acevedo"
+                        fill
+                        className="object-cover object-top"
+                        sizes="32px"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 w-full">
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-extrabold text-[#0070C0] bg-blue-50 px-2 py-0.5 rounded-md">
+                      Karen Acevedo
+                    </span>
+                  </div>
+                </div>
+
               </div>
+              <p className="text-[10px] sm:text-xs text-slate-200 mt-2 text-center font-medium">
+                ✓ Voto Válido: Cruza el símbolo dentro del recuadro
+              </p>
             </div>
 
-            {/* Botones de acción del banner */}
-            <div className="flex flex-row w-full sm:w-auto items-center justify-center gap-2.5 shrink-0">
-              <Link
-                href="/plan"
-                className="flex-1 sm:flex-none justify-center bg-[#ffcc00] text-[#041c3a] hover:bg-yellow-300 active:scale-95 font-heading font-bold px-5 py-2.5 sm:px-6 sm:py-3 rounded-full text-xs sm:text-sm shadow-md transition-all flex items-center gap-1"
-              >
-                <span>Plan de Gobierno</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-              <Link
-                href="/karen"
-                className="flex-1 sm:flex-none justify-center bg-white/10 hover:bg-white/20 border border-white/30 text-white font-heading font-semibold px-4 py-2.5 sm:px-5 sm:py-3 rounded-full text-xs sm:text-sm transition-all"
-              >
-                Conoce a Karen
-              </Link>
-            </div>
           </div>
         </div>
       </section>
@@ -359,11 +500,11 @@ export default function ConsultaElectoralClient() {
               </p>
             </div>
             <div className="flex items-center gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 font-black text-sm flex items-center justify-center shrink-0">
                 3
               </div>
               <p className="text-xs text-slate-700 font-medium">
-                Revisa tu aula, mesa y si saliste como <strong>Miembro de Mesa</strong>.
+                En tu cédula, marca los <strong>2 símbolos: Provincial y Distrital</strong>.
               </p>
             </div>
           </div>
@@ -455,7 +596,7 @@ export default function ConsultaElectoralClient() {
                   >
                     <span>{faq.question}</span>
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+                      className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${
                         isOpen ? 'rotate-180 text-[#0070C0]' : ''
                       }`}
                     />
@@ -470,7 +611,7 @@ export default function ConsultaElectoralClient() {
             })}
           </div>
 
-          {/* CTA Inferior de Consulta */}
+          {/* CTA Inferior de Consulta y Recordatorio */}
           <div className="mt-8 sm:mt-12 text-center p-6 sm:p-8 bg-slate-50 rounded-2xl sm:rounded-3xl border border-slate-200">
             <h3 className="text-base sm:text-xl font-bold text-slate-900 mb-1.5">
               ¿Listo para consultar tus datos oficiales?
