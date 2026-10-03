@@ -42,6 +42,17 @@ export type Mesa = {
   estado: 'pendiente' | 'enviada';
 };
 
+export type Personero = {
+  id: string;
+  dni: string;
+  nombre_completo: string;
+  telefono: string;
+  local_id: string;
+  mesa_numero: string;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
 export type Acta = {
   id: string;
   mesa_id: string;

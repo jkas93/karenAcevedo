@@ -17,6 +17,9 @@ import {
 } from 'recharts';
 import { useElectoral } from '@/lib/firebase/ElectoralContext';
 import { PARTIDOS_CHACLACAYO } from '@/lib/firebase/types';
+import { useAccess } from '@/components/access/AccessContext';
+import { LocalesElectoralesPanel } from '@/components/electoral/LocalesElectoralesPanel';
+import { PersonerosPanel } from '@/components/electoral/PersonerosPanel';
 
 // Importar el mapa dinámicamente para evitar errores de SSR con Leaflet
 const MapChaclacayo = dynamic(
@@ -24,7 +27,7 @@ const MapChaclacayo = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[500px] w-full bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400">
+      <div className="h-[360px] w-full bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400 lg:h-[500px]">
         Cargando mapa...
       </div>
     ),
@@ -34,9 +37,10 @@ const MapChaclacayo = dynamic(
 export default function ControlElectoralDashboard() {
   const [modoTV, setModoTV] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const { hasPermission } = useAccess();
 
   // Datos centralizados desde el ElectoralProvider (sin listeners duplicados)
-  const { locales, mesas, actas, loading } = useElectoral();
+  const { locales, mesas, actas, personeros, loading } = useElectoral();
 
   // ─── Cálculos estadísticos ─────────────────────────────────────────────────
 
@@ -163,9 +167,9 @@ export default function ControlElectoralDashboard() {
   }
 
   return (
-    <div className={modoTV ? "fixed inset-0 z-50 bg-slate-50 overflow-auto p-4 md:p-8 space-y-6" : "space-y-6 max-w-[1600px] mx-auto"}>
+    <div className={modoTV ? "fixed inset-0 z-50 bg-slate-50 overflow-auto p-3 sm:p-4 md:p-8 space-y-5" : "mx-auto max-w-[1600px] space-y-5"}>
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">Control Electoral — Día D</h1>
           <div className="flex items-center gap-3 flex-wrap">
@@ -181,11 +185,13 @@ export default function ControlElectoralDashboard() {
         </div>
         <button
           onClick={() => setModoTV(!modoTV)}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md"
+          className="flex min-h-10 w-fit items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-white shadow-md transition-colors hover:bg-slate-700 sm:px-4 sm:text-sm"
         >
           {modoTV ? <><Minimize className="w-4 h-4" /> Salir de Modo TV</> : <><Maximize className="w-4 h-4" /> Modo TV (Centro Cómputo)</>}
         </button>
       </div>
+
+      <LocalesElectoralesPanel locales={locales} mesas={mesas} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -380,8 +386,15 @@ export default function ControlElectoralDashboard() {
         </div>
       </div>
 
+      <PersonerosPanel
+        personeros={personeros}
+        locales={locales}
+        mesas={mesas}
+        canManage={hasPermission('electoral.manage')}
+      />
+
       {/* Auditoría Fotográfica de Actas */}
-      <Card className="shadow-sm mt-8 border-t-4 border-t-slate-800">
+      <Card className="border-t-4 border-t-slate-800 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <Camera className="w-5 h-5 text-slate-500" />

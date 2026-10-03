@@ -11,14 +11,15 @@ import {
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { app, auth, db } from '../firebase';
-import type { Acta, LocalVotacion, Mesa, Usuario } from './types';
+import type { Acta, LocalVotacion, Mesa, Personero, Usuario } from './types';
 
-export type { LocalVotacion, Mesa, Acta } from './types';
+export type { LocalVotacion, Mesa, Acta, Personero } from './types';
 export type UsuarioResumen = Pick<Usuario, 'id' | 'uid' | 'nombre' | 'dni' | 'rol'>;
 
 const localesRef = collection(db, 'locales');
 const mesasRef = collection(db, 'mesas');
 const actasRef = collection(db, 'actas');
+const personerosRef = collection(db, 'personeros');
 
 type SubscriptionErrorHandler = (error: Error) => void;
 
@@ -90,6 +91,28 @@ export const electoralService = {
               ...data,
               timestamp: dateFromTimestamp(data.timestamp),
             } as Acta;
+          }),
+        );
+      },
+      (error) => onError?.(error),
+    ),
+
+  subscribeToPersoneros: (
+    callback: (personeros: Personero[]) => void,
+    onError?: SubscriptionErrorHandler,
+  ) =>
+    onSnapshot(
+      personerosRef,
+      (snapshot) => {
+        callback(
+          snapshot.docs.map((document) => {
+            const data = document.data();
+            return {
+              id: document.id,
+              ...data,
+              created_at: dateFromTimestamp(data.created_at),
+              updated_at: dateFromTimestamp(data.updated_at),
+            } as Personero;
           }),
         );
       },

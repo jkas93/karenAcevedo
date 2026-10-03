@@ -181,6 +181,13 @@ service cloud.firestore {
       allow delete: if hasPermission('electoral.manage');
     }
 
+    match /personeros/{docId} {
+      allow read: if hasPermission('electoral.view');
+      // Las escrituras pasan por la API administrativa para validar DNI, celular,
+      // local, mesa y permisos de forma atómica.
+      allow create, update, delete: if false;
+    }
+
     match /config/{docId} {
       allow read: if hasPermission('settings.view');
       allow create, update: if hasPermission('settings.manage')

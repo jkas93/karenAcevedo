@@ -657,7 +657,7 @@ export default function ConfiguracionPage() {
         <div>
           <p className="font-bold mb-1">💡 Notas sobre Operación Electoral</p>
           <ul className="list-disc pl-4 space-y-1 text-xs">
-            <li>La carga estándar creará los 7 centros históricos de Chaclacayo y sus mesas correlativas.</li>
+            <li>La carga estándar creará los 8 locales confirmados de Chaclacayo y sus 138 mesas correlativas.</li>
             <li>Si realizas un cambio de locales o mesas, la base de datos se actualizará y los Digitadores verán las nuevas mesas disponibles inmediatamente en el módulo de Ingreso de Actas.</li>
             <li>Los datos de los voluntarios no se verán alterados por estas operaciones de base de datos.</li>
           </ul>

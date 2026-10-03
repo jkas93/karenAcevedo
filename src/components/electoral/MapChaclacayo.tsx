@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { LocalVotacion, Mesa } from '@/lib/firebase/electoral-service';
+import { googleMapsUrl } from '@/lib/electoral/locations';
 
 // Corregir los iconos por defecto de Leaflet en Next.js
 const iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
@@ -30,6 +31,20 @@ interface MapChaclacayoProps {
   mesas: Mesa[];
 }
 
+function FitLocalBounds({ locales }: { locales: LocalVotacion[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const positions = locales
+      .filter((local) => Number.isFinite(local.latitud) && Number.isFinite(local.longitud))
+      .map((local) => [local.latitud, local.longitud] as [number, number]);
+    if (positions.length === 1) map.setView(positions[0], 15);
+    if (positions.length > 1) map.fitBounds(positions, { padding: [32, 32], maxZoom: 15 });
+  }, [locales, map]);
+
+  return null;
+}
+
 export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [geoData, setGeoData] = useState<GeoJsonObject | null>(null);
@@ -46,7 +61,7 @@ export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
 
   if (!isMounted) {
     return (
-      <div className="h-[500px] w-full bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400">
+      <div className="h-[360px] w-full bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400 lg:h-[500px]">
         Cargando mapa...
       </div>
     );
@@ -55,13 +70,14 @@ export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
   const centerCoordinates: [number, number] = [-11.9818, -76.7651];
 
   return (
-    <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm z-0">
+    <div className="h-[360px] w-full overflow-hidden rounded-2xl border border-slate-200 shadow-sm z-0 lg:h-[500px]">
       <MapContainer
         center={centerCoordinates}
         zoom={14}
         scrollWheelZoom={true}
         style={{ height: '100%', width: '100%', zIndex: 0 }}
       >
+        <FitLocalBounds locales={locales} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -145,6 +161,14 @@ export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
                       <span className="font-semibold text-slate-700">{mesasEnviadas} de {local.total_mesas}</span>
                     </div>
                   </div>
+                  <a
+                    href={googleMapsUrl(local.nombre, local.direccion, local.latitud, local.longitud)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-bold text-white no-underline"
+                  >
+                    Abrir en Google Maps ↗
+                  </a>
                 </div>
               </Popup>
             </Marker>

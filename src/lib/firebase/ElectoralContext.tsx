@@ -8,12 +8,13 @@ import {
   type ReactNode,
 } from 'react';
 import { electoralService, type UsuarioResumen } from './electoral-service';
-import type { Acta, LocalVotacion, Mesa, RolUsuario } from './types';
+import type { Acta, LocalVotacion, Mesa, Personero, RolUsuario } from './types';
 
 interface ElectoralContextType {
   locales: LocalVotacion[];
   mesas: Mesa[];
   actas: Acta[];
+  personeros: Personero[];
   digitadores: UsuarioResumen[];
   loading: boolean;
 }
@@ -22,6 +23,7 @@ const ElectoralContext = createContext<ElectoralContextType>({
   locales: [],
   mesas: [],
   actas: [],
+  personeros: [],
   digitadores: [],
   loading: true,
 });
@@ -36,12 +38,13 @@ export function ElectoralProvider({
   const [locales, setLocales] = useState<LocalVotacion[]>([]);
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [actas, setActas] = useState<Acta[]>([]);
+  const [personeros, setPersoneros] = useState<Personero[]>([]);
   const [digitadores, setDigitadores] = useState<UsuarioResumen[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const privileged = role === 'superusuario' || role === 'administrador' || role === 'candidata';
-    const expectedSubscriptions = privileged ? 4 : 2;
+    const expectedSubscriptions = privileged ? 5 : 2;
     const loadedSubscriptions = new Set<string>();
     const unsubscribers: Array<() => void> = [];
 
@@ -90,6 +93,13 @@ export function ElectoralProvider({
           },
           handleError('digitadores'),
         ),
+        electoralService.subscribeToPersoneros(
+          (data) => {
+            setPersoneros(data);
+            markLoaded('personeros');
+          },
+          handleError('personeros'),
+        ),
       );
     }
 
@@ -100,7 +110,7 @@ export function ElectoralProvider({
 
   return (
     <ElectoralContext.Provider
-      value={{ locales, mesas, actas, digitadores, loading }}
+      value={{ locales, mesas, actas, personeros, digitadores, loading }}
     >
       {children}
     </ElectoralContext.Provider>

@@ -4,13 +4,14 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getAdminServices } from '@/lib/firebase-admin';
 import { ApiError, apiErrorResponse, readJsonBody, requirePermission } from '@/lib/server/admin-auth';
+import { CHACLACAYO_ELECTORAL_LOCATIONS } from '@/lib/electoral/locations';
 
 export const runtime = 'nodejs';
 
 const MAX_ROWS = 5000;
 const MAX_BODY_BYTES = 3 * 1024 * 1024;
 const BATCH_SIZE = 400;
-const COLLECTIONS = ['actas', 'mesas', 'locales'] as const;
+const COLLECTIONS = ['actas', 'personeros', 'mesas', 'locales'] as const;
 
 type ImportRow = {
   mesa: string;
@@ -23,16 +24,6 @@ type ImportRow = {
 
 type BackupDocument = { id: string; data: DocumentData };
 type Backup = Record<(typeof COLLECTIONS)[number], BackupDocument[]>;
-
-const STANDARD_LOCATIONS = [
-  { nombre: 'I.E. FELIPE SANTIAGO ESTENOS', direccion: 'Av. Nicolás Ayllón S/N, Cuadra 23', latitud: -11.979, longitud: -76.7725, zona: 'Centro', mesas: 18 },
-  { nombre: 'I.E. 1188 JUAN PABLO II', direccion: 'Ca. Los Rosales S/N, Huascata', latitud: -11.973, longitud: -76.755, zona: 'Huascata', mesas: 12 },
-  { nombre: 'I.E. 1190 MARIANO MELGAR', direccion: 'Ca. San Martín S/N, Miguel Grau', latitud: -11.986, longitud: -76.782, zona: 'Miguel Grau', mesas: 10 },
-  { nombre: 'I.E. MIGUEL GRAU SEMINARIO', direccion: 'Ca. Libertad 123', latitud: -11.9805, longitud: -76.768, zona: 'Centro', mesas: 14 },
-  { nombre: 'I.E. 0053 SAN VICENTE DE PAUL', direccion: 'Av. Las Gardenias', latitud: -11.9715, longitud: -76.749, zona: 'Huascata', mesas: 8 },
-  { nombre: 'I.E. SAN JUAN BOSCO', direccion: 'Jr. Arequipa 450', latitud: -11.9815, longitud: -76.765, zona: 'Centro', mesas: 6 },
-  { nombre: 'ESTADIO MUNICIPAL TAHUANTINSUYO', direccion: 'Av. Los Laureles', latitud: -11.977, longitud: -76.77, zona: 'Centro', mesas: 22 },
-];
 
 function cleanText(value: unknown, maxLength: number): string {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -70,12 +61,14 @@ function normalizedRows(value: unknown): ImportRow[] {
 }
 
 function standardRows(): ImportRow[] {
-  let mesa = 45000;
-  return STANDARD_LOCATIONS.flatMap((location) =>
+  // La relación entregada suma 138 mesas y confirma que Florentino Prat incluye
+  // la mesa 041295. El rango correlativo resultante comienza en 041158.
+  let mesa = 41158;
+  return CHACLACAYO_ELECTORAL_LOCATIONS.flatMap((location) =>
     Array.from({ length: location.mesas }, () => ({
       mesa: String(mesa++).padStart(6, '0'),
       local: location.nombre,
-      direccion: location.direccion,
+      direccion: [location.direccion, location.referencia].filter(Boolean).join(' · '),
       zona: location.zona,
       latitud: location.latitud,
       longitud: location.longitud,
