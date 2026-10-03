@@ -64,3 +64,14 @@ test('rechaza celular mal formateado si se ingresa', () => {
     /El celular es opcional, pero si lo ingresas/
   );
 });
+
+test('permite registrar personero con sede fuera_chaclacayo', () => {
+  const result = validatePersoneroInput({
+    dni: '71260540',
+    nombre_completo: 'Carlos Quispe',
+    local_id: 'fuera_chaclacayo',
+    mesa_numero: '012345',
+  });
+  assert.equal(result.local_id, 'fuera_chaclacayo');
+  assert.equal(result.mesa_numero, '012345');
+});

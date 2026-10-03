@@ -97,7 +97,9 @@ export async function POST(request: Request) {
 
     const duplicateDni = await collection.where('dni', '==', input.dni).limit(2).get();
 
-    if (input.local_id) {
+    const isFuera = input.local_id === 'fuera_chaclacayo';
+
+    if (input.local_id && !isFuera) {
       const localSnapshot = await adminDb.collection('locales').doc(input.local_id).get();
       if (!localSnapshot.exists) throw new ApiError(400, 'El local seleccionado ya no está disponible.');
 
@@ -109,7 +111,7 @@ export async function POST(request: Request) {
           .get();
         if (mesaSnapshot.empty) throw new ApiError(400, 'La mesa no pertenece al local seleccionado.');
       }
-    } else if (input.mesa_numero) {
+    } else if (input.mesa_numero && !isFuera) {
       throw new ApiError(400, 'Para asignar una mesa debes seleccionar primero un local de votación.');
     }
 
@@ -134,6 +136,13 @@ export async function POST(request: Request) {
     const reference = collection.doc(id);
     const current = await reference.get();
     if (!current.exists) throw new ApiError(404, 'El personero ya no existe.');
+    
+    // Regla de negocio: El DNI no se puede modificar en la edición
+    const currentData = current.data();
+    if (currentData?.dni && input.dni !== currentData.dni) {
+      throw new ApiError(400, 'El DNI de un personero no se puede modificar una vez registrado.');
+    }
+
     if (duplicateDni.docs.some((document) => document.id !== id)) {
       throw new ApiError(409, 'Ya existe otro personero registrado con ese DNI.');
     }
