@@ -6,12 +6,12 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "img-src 'self' data: blob: https://images.unsplash.com https://unpkg.com https://*.basemaps.cartocdn.com https://*.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com",
+  "img-src 'self' data: blob: https://images.unsplash.com https://unpkg.com https://*.basemaps.cartocdn.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.tile.openstreetmap.org",
   "media-src 'self' blob:",
   "object-src 'none'",
   "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.google-analytics.com https://*.analytics.google.com",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://*.google-analytics.com https://*.analytics.google.com https://*.google.com https://*.basemaps.cartocdn.com",
   "upgrade-insecure-requests",
 ].join("; ");
 
