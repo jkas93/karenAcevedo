@@ -474,15 +474,15 @@ export function PersonerosPanel({
             <>
               {/* VISTA ESCRITORIO */}
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[800px] text-left text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                <table className="w-full min-w-[760px] text-left text-xs">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
                     <tr>
-                      <th className="px-4 py-3">DNI</th>
-                      <th className="px-4 py-3">Nombre completo</th>
-                      <th className="px-4 py-3">Contacto</th>
-                      <th className="px-4 py-3">Sede / Colegio</th>
-                      <th className="px-4 py-3 text-center">Ubicación</th>
-                      <th className="px-4 py-3 text-right">Acciones</th>
+                      <th className="px-3 py-2">DNI</th>
+                      <th className="px-3 py-2">Nombre completo</th>
+                      <th className="px-3 py-2">Contacto</th>
+                      <th className="px-3 py-2">Sede / Colegio</th>
+                      <th className="px-3 py-2 text-center">Ubicación</th>
+                      <th className="px-3 py-2 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -497,27 +497,27 @@ export function PersonerosPanel({
                       return (
                         <tr key={personero.id} className="transition hover:bg-blue-50/30">
                           {/* DNI */}
-                          <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                            <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-800">
+                          <td className="px-3 py-2 font-mono font-bold text-slate-900">
+                            <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-800">
                               {personero.dni}
                             </span>
                           </td>
 
                           {/* Nombre completo */}
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2">
                             {personero.nombre_completo ? (
                               <span className="font-bold text-slate-800">
                                 {personero.nombre_completo}
                               </span>
                             ) : (
-                              <span className="text-xs italic text-slate-400">
+                              <span className="text-[11px] italic text-slate-400">
                                 (Por completar)
                               </span>
                             )}
                           </td>
 
                           {/* Celular con iconos compactos */}
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2">
                             {personero.telefono ? (
                               <div className="flex items-center gap-1.5">
                                 <a
@@ -546,9 +546,9 @@ export function PersonerosPanel({
                           </td>
 
                           {/* Sede / Colegio */}
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2">
                             {isFuera ? (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700 border border-purple-200">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200">
                                 <MapPin className="h-3 w-3 text-purple-600" />
                                 Fuera de Chaclacayo
                               </span>
@@ -558,38 +558,38 @@ export function PersonerosPanel({
                                   {local.nombre}
                                 </span>
                                 {personero.mesa_numero ? (
-                                  <span className="text-[11px] font-bold text-blue-600">
+                                  <span className="text-[10px] font-bold text-blue-600">
                                     Mesa N° {personero.mesa_numero}
                                   </span>
                                 ) : (
-                                  <span className="text-[11px] text-slate-400">
+                                  <span className="text-[10px] text-slate-400">
                                     Sin mesa específica
                                   </span>
                                 )}
                               </div>
                             ) : (
-                              <span className="inline-block rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
+                              <span className="inline-block rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-200">
                                 Sin asignar
                               </span>
                             )}
                           </td>
 
                           {/* Ubicación Google Maps con icono compacto */}
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-3 py-2 text-center">
                             {mapsUrl ? (
                               <a
                                 href={mapsUrl}
                                 target="_blank"
                                 rel="noreferrer"
                                 title={`Ver ubicación de ${local?.nombre} en Google Maps`}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white transition shadow-2xs border border-slate-200"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white transition shadow-2xs border border-slate-200"
                               >
-                                <Navigation className="h-4 w-4" />
+                                <Navigation className="h-3.5 w-3.5" />
                               </a>
                             ) : isFuera ? (
                               <span
                                 title="Vota fuera de Chaclacayo"
-                                className="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100"
+                                className="text-[10px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100"
                               >
                                 Externo
                               </span>
@@ -599,28 +599,28 @@ export function PersonerosPanel({
                           </td>
 
                           {/* Acciones */}
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-3 py-2 text-right">
                             {canManage && (
                               <div className="flex items-center justify-end gap-1">
                                 <button
                                   type="button"
                                   onClick={() => openEdit(personero)}
                                   title="Editar personero"
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 transition"
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 transition"
                                 >
-                                  <Pencil className="h-3.5 w-3.5" />
+                                  <Pencil className="h-3 w-3" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDelete(personero)}
                                   disabled={deletingId === personero.id}
                                   title="Eliminar personero"
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition disabled:opacity-50"
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition disabled:opacity-50"
                                 >
                                   {deletingId === personero.id ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <Loader2 className="h-3 w-3 animate-spin" />
                                   ) : (
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-3 w-3" />
                                   )}
                                 </button>
                               </div>
