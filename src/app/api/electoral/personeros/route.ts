@@ -17,17 +17,61 @@ function cleanId(value: unknown) {
   return id;
 }
 
+export async function GET(request: Request) {
+  try {
+    await requirePermission(request, 'electoral.view');
+    const { adminDb } = getAdminServices();
+    const snapshot = await adminDb.collection('personeros').get();
+    const personeros = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        dni: data.dni || '',
+        nombre_completo: data.nombre_completo || '',
+        telefono: data.telefono || '',
+        local_id: data.local_id || '',
+        mesa_numero: data.mesa_numero || '',
+        created_at: data.created_at?.toDate ? data.created_at.toDate() : data.created_at || null,
+        updated_at: data.updated_at?.toDate ? data.updated_at.toDate() : data.updated_at || null,
+      };
+    });
+    return NextResponse.json({ success: true, personeros });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const session = await requirePermission(request, 'electoral.manage');
     const body = await readJsonBody(request);
     const action = typeof body.action === 'string' ? body.action : '';
-    if (!['create', 'update', 'delete'].includes(action)) {
+    if (!['create', 'update', 'delete', 'list'].includes(action)) {
       throw new ApiError(400, 'La operación solicitada no es válida.');
     }
 
     const { adminDb } = getAdminServices();
     const collection = adminDb.collection('personeros');
+
+    if (action === 'list') {
+      await requirePermission(request, 'electoral.view');
+      const snapshot = await collection.get();
+      const personeros = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          dni: data.dni || '',
+          nombre_completo: data.nombre_completo || '',
+          telefono: data.telefono || '',
+          local_id: data.local_id || '',
+          mesa_numero: data.mesa_numero || '',
+          created_at: data.created_at?.toDate ? data.created_at.toDate() : data.created_at || null,
+          updated_at: data.updated_at?.toDate ? data.updated_at.toDate() : data.updated_at || null,
+        };
+      });
+      return NextResponse.json({ success: true, personeros });
+    }
+
+    const session = await requirePermission(request, 'electoral.manage');
 
     if (action === 'delete') {
       const id = cleanId(body.id);

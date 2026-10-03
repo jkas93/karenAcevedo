@@ -21,6 +21,8 @@ const mesasRef = collection(db, 'mesas');
 const actasRef = collection(db, 'actas');
 const personerosRef = collection(db, 'personeros');
 
+import { authenticatedPost } from './authenticated-request';
+
 type SubscriptionErrorHandler = (error: Error) => void;
 
 function dateFromTimestamp(value: unknown): Date {
@@ -97,11 +99,49 @@ export const electoralService = {
       (error) => onError?.(error),
     ),
 
+  fetchPersoneros: async (): Promise<Personero[]> => {
+    try {
+      const res = await authenticatedPost<{ success: boolean; personeros: Personero[] }>(
+        '/api/electoral/personeros',
+        { action: 'list' }
+      );
+      if (res?.personeros) {
+        return res.personeros.map((p) => ({
+          ...p,
+          created_at: p.created_at ? new Date(p.created_at) : undefined,
+          updated_at: p.updated_at ? new Date(p.updated_at) : undefined,
+        }));
+      }
+    } catch (e) {
+      console.warn('Error al cargar personeros por API:', e);
+    }
+    return [];
+  },
+
   subscribeToPersoneros: (
     callback: (personeros: Personero[]) => void,
     onError?: SubscriptionErrorHandler,
-  ) =>
-    onSnapshot(
+  ) => {
+    authenticatedPost<{ success: boolean; personeros: Personero[] }>(
+      '/api/electoral/personeros',
+      { action: 'list' }
+    )
+      .then((res) => {
+        if (res?.personeros && res.personeros.length > 0) {
+          callback(
+            res.personeros.map((p) => ({
+              ...p,
+              created_at: p.created_at ? new Date(p.created_at) : undefined,
+              updated_at: p.updated_at ? new Date(p.updated_at) : undefined,
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Fallback API personeros:', err);
+      });
+
+    return onSnapshot(
       personerosRef,
       (snapshot) => {
         callback(
@@ -116,8 +156,30 @@ export const electoralService = {
           }),
         );
       },
-      (error) => onError?.(error),
-    ),
+      (error) => {
+        console.warn('onSnapshot personeros warning:', error);
+        authenticatedPost<{ success: boolean; personeros: Personero[] }>(
+          '/api/electoral/personeros',
+          { action: 'list' }
+        )
+          .then((res) => {
+            if (res?.personeros) {
+              callback(
+                res.personeros.map((p) => ({
+                  ...p,
+                  created_at: p.created_at ? new Date(p.created_at) : undefined,
+                  updated_at: p.updated_at ? new Date(p.updated_at) : undefined,
+                }))
+              );
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            onError?.(error);
+          });
+      },
+    );
+  },
 
   guardarActa: async (acta: Omit<Acta, 'id' | 'timestamp'>) => {
     const conteos = [
