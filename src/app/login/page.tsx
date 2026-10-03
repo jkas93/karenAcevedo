@@ -32,7 +32,7 @@ export default function LoginPage() {
         throw new Error('La cuenta no tiene un perfil autorizado.');
       }
 
-      router.replace('/dashboard/calendario');
+      router.replace('/dashboard/control-electoral');
     } catch (error: unknown) {
       console.error(error);
       setError("Credenciales incorrectas o problemas de conexión.");

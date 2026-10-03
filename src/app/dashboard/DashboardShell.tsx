@@ -48,11 +48,11 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  { href: '/dashboard/dispositivos', label: 'Dispositivos Auto Clicker', permission: 'devices.view', icon: Smartphone, matches: (path) => path.startsWith('/dashboard/dispositivos') },
-  { href: '/dashboard/calendario', label: 'Calendario operativo', permission: 'calendar.view', icon: CalendarDays, matches: (path) => path.startsWith('/dashboard/calendario') },
-  { href: '/dashboard', label: 'Voluntarios', permission: 'volunteers.view', icon: Users, matches: (path) => path === '/dashboard' },
-  { href: '/dashboard/control-electoral', label: 'Control Electoral', permission: 'electoral.view', icon: Map, matches: (path) => path.startsWith('/dashboard/control-electoral') },
+  { href: '/dashboard/control-electoral', label: 'Control Electoral', permission: 'electoral.view', icon: Map, matches: (path) => path.startsWith('/dashboard/control-electoral') || path === '/dashboard' },
   { href: '/dashboard/digitacion', label: 'Ingreso de Actas', permission: 'actas.view', icon: ClipboardCheck, matches: (path) => path.startsWith('/dashboard/digitacion') },
+  { href: '/dashboard/calendario', label: 'Calendario operativo', permission: 'calendar.view', icon: CalendarDays, matches: (path) => path.startsWith('/dashboard/calendario') },
+  { href: '/dashboard/voluntarios', label: 'Voluntarios', permission: 'volunteers.view', icon: Users, matches: (path) => path.startsWith('/dashboard/voluntarios') },
+  { href: '/dashboard/dispositivos', label: 'Dispositivos Auto Clicker', permission: 'devices.view', icon: Smartphone, matches: (path) => path.startsWith('/dashboard/dispositivos') },
   { href: '/dashboard/equipo', label: 'Fichas del equipo', permission: 'teamProfiles.view', icon: ClipboardList, matches: (path) => path.startsWith('/dashboard/equipo') },
   { href: '/dashboard/configuracion', label: 'Configuración', permission: 'settings.view', icon: Settings, matches: (path) => path.startsWith('/dashboard/configuracion') },
   { href: '/dashboard/usuarios', label: 'Gestión de Accesos', permission: 'users.view', icon: ShieldCheck, matches: (path) => path.startsWith('/dashboard/usuarios') },
@@ -119,6 +119,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     pathname.startsWith('/dashboard/control-electoral')
     || pathname.startsWith('/dashboard/digitacion')
     || pathname.startsWith('/dashboard/configuracion')
+    || pathname === '/dashboard'
   );
   const isSuperuser = access.role === 'superusuario';
 

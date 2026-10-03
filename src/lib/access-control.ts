@@ -70,8 +70,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     'volunteers.view', 'volunteers.manage',
     'electoral.view',
   ),
-  digitador: withPermissions('calendar.view', 'actas.view', 'actas.manage'),
-  usuario: withPermissions('calendar.view', 'volunteers.view', 'volunteers.manage'),
+  digitador: withPermissions('electoral.view', 'calendar.view', 'actas.view', 'actas.manage'),
+  usuario: withPermissions('electoral.view', 'calendar.view', 'volunteers.view', 'volunteers.manage'),
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -136,12 +136,14 @@ export function normalizePermissions(role: UserRole, value: unknown): RolePermis
 }
 
 export function permissionForDashboardPath(pathname: string): PermissionKey {
-  if (pathname.startsWith('/dashboard/dispositivos')) return 'devices.view';
-  if (pathname.startsWith('/dashboard/calendario')) return 'calendar.view';
   if (pathname.startsWith('/dashboard/control-electoral')) return 'electoral.view';
   if (pathname.startsWith('/dashboard/digitacion')) return 'actas.view';
+  if (pathname.startsWith('/dashboard/dispositivos')) return 'devices.view';
+  if (pathname.startsWith('/dashboard/calendario')) return 'calendar.view';
+  if (pathname.startsWith('/dashboard/voluntarios')) return 'volunteers.view';
   if (pathname.startsWith('/dashboard/equipo')) return 'teamProfiles.view';
   if (pathname.startsWith('/dashboard/configuracion')) return 'settings.view';
   if (pathname.startsWith('/dashboard/usuarios')) return 'users.view';
-  return 'volunteers.view';
+  if (pathname === '/dashboard') return 'electoral.view';
+  return 'electoral.view';
 }

@@ -5,8 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/dashboard/',
     name: 'Equipo Karen Acevedo',
     short_name: 'Equipo Karen',
-    description: 'Calendario operativo y coordinacion diaria del equipo de campana.',
-    start_url: '/dashboard/calendario',
+    start_url: '/dashboard/control-electoral',
     scope: '/',
     display: 'standalone',
     background_color: '#f8fafc',
@@ -35,9 +34,9 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: 'Calendario operativo',
-        short_name: 'Calendario',
-        url: '/dashboard/calendario',
+        name: 'Control Electoral',
+        short_name: 'Electoral',
+        url: '/dashboard/control-electoral',
         icons: [{ src: '/pwa-icon-192.png?v=brazo-2', sizes: '192x192', type: 'image/png' }],
       },
     ],
