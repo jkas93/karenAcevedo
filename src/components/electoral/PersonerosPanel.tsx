@@ -139,6 +139,41 @@ export function PersonerosPanel({
       .sort((a, b) => (a.nombre_completo || a.dni).localeCompare(b.nombre_completo || b.dni, 'es'));
   }, [personeros, filterMode, search, locales, availableLocalesList]);
 
+  // Validación en tiempo real del DNI ingresado
+  const dniCheck = useMemo(() => {
+    const cleanDni = form.dni.trim().replace(/\D/g, '');
+    if (!cleanDni) return null;
+    if (cleanDni.length < 8) {
+      return {
+        status: 'typing' as const,
+        message: `Faltan ${8 - cleanDni.length} dígito(s) para completar el DNI (8 números).`,
+      };
+    }
+    if (editing && editing.dni === cleanDni) {
+      return {
+        status: 'same' as const,
+        message: 'DNI actual de este personero.',
+      };
+    }
+    const existing = personeros.find((p) => p.dni === cleanDni);
+    if (existing) {
+      const local = resolveLocal(existing.local_id);
+      return {
+        status: 'duplicate' as const,
+        existing,
+        message: `Este DNI (${cleanDni}) ya se encuentra registrado en la base de datos.`,
+        personeroName: existing.nombre_completo || '(Sin nombre registrado aún)',
+        detail: local
+          ? `Colegio: ${local.nombre} ${existing.mesa_numero ? `· Mesa ${existing.mesa_numero}` : ''}`
+          : 'Sin colegio asignado aún.',
+      };
+    }
+    return {
+      status: 'available' as const,
+      message: '✅ DNI disponible (no registrado previamente). Puedes continuar completando los campos.',
+    };
+  }, [form.dni, personeros, editing, availableLocalesList, locales]);
+
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
@@ -177,6 +212,14 @@ export function PersonerosPanel({
       setFeedback({
         type: 'error',
         text: error instanceof Error ? error.message : 'Revisa los datos ingresados.',
+      });
+      return;
+    }
+
+    if (dniCheck?.status === 'duplicate') {
+      setFeedback({
+        type: 'error',
+        text: `El DNI ${form.dni} ya está registrado a nombre de "${dniCheck.personeroName}". No se pueden registrar DNIs duplicados.`,
       });
       return;
     }
@@ -724,12 +767,59 @@ export function PersonerosPanel({
                       dni: e.target.value.replace(/\D/g, ''),
                     }))
                   }
-                  className="h-11 w-full rounded-xl border border-slate-300 font-mono text-sm font-bold text-slate-900 px-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className={`h-11 w-full rounded-xl border font-mono text-sm font-bold text-slate-900 px-3 outline-none transition focus:ring-2 ${
+                    dniCheck?.status === 'duplicate'
+                      ? 'border-amber-400 bg-amber-50/40 focus:border-amber-500 focus:ring-amber-100'
+                      : dniCheck?.status === 'available'
+                      ? 'border-emerald-400 bg-emerald-50/30 focus:border-emerald-500 focus:ring-emerald-100'
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-100'
+                  }`}
                   placeholder="8 dígitos numéricos"
                 />
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Ingresa los 8 números del DNI para registrar o buscar.
-                </p>
+
+                {/* Comunicado / Validación en tiempo real del DNI */}
+                {dniCheck && (
+                  <div className="mt-2">
+                    {dniCheck.status === 'duplicate' && (
+                      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 shadow-xs">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5 font-black text-amber-900">
+                              <AlertCircle className="h-4 w-4 text-amber-700 shrink-0" />
+                              <span>{dniCheck.message}</span>
+                            </div>
+                            <p className="mt-1 text-slate-800">
+                              <strong>Personero actual:</strong> {dniCheck.personeroName}
+                            </p>
+                            <p className="text-[11px] text-slate-600 mt-0.5">
+                              {dniCheck.detail}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(dniCheck.existing)}
+                            className="shrink-0 rounded-lg bg-amber-700 px-2.5 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-amber-800 transition cursor-pointer"
+                          >
+                            Editar este personero ↗
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {dniCheck.status === 'available' && (
+                      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>{dniCheck.message}</span>
+                      </div>
+                    )}
+
+                    {dniCheck.status === 'typing' && (
+                      <p className="text-[11px] font-medium text-slate-500">
+                        {dniCheck.message}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Nombre completo (Opcional) */}
@@ -852,11 +942,17 @@ export function PersonerosPanel({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || dniCheck?.status === 'duplicate' || form.dni.length !== 8}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50 sm:text-sm"
                 >
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar personero'}
+                  {saving
+                    ? 'Guardando…'
+                    : dniCheck?.status === 'duplicate'
+                    ? 'DNI ya registrado'
+                    : editing
+                    ? 'Guardar cambios'
+                    : 'Guardar personero'}
                 </button>
               </div>
             </form>

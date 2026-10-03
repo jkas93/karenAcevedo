@@ -18,7 +18,6 @@ import {
 import { useElectoral } from '@/lib/firebase/ElectoralContext';
 import { PARTIDOS_CHACLACAYO } from '@/lib/firebase/types';
 import { useAccess } from '@/components/access/AccessContext';
-import { LocalesElectoralesPanel } from '@/components/electoral/LocalesElectoralesPanel';
 import { PersonerosPanel } from '@/components/electoral/PersonerosPanel';
 
 // Importar el mapa dinámicamente para evitar errores de SSR con Leaflet
@@ -45,7 +44,7 @@ export default function ControlElectoralDashboard() {
   // ─── Cálculos estadísticos ─────────────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const totalMesas = mesas.length;
+    const totalMesas = mesas.length > 0 ? mesas.length : 138;
     const mesasEscrutadas = mesas.filter((m) => m.estado === 'enviada').length;
     const porcentajeEscrutado =
       totalMesas > 0
@@ -191,8 +190,6 @@ export default function ControlElectoralDashboard() {
         </button>
       </div>
 
-      <LocalesElectoralesPanel locales={locales} mesas={mesas} />
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Mesas escrutadas */}
@@ -260,9 +257,9 @@ export default function ControlElectoralDashboard() {
             <MapPin className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{locales.length}</div>
+            <div className="text-2xl font-bold">{locales.length > 0 ? locales.length : 8}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.colegiosCompletados} colegios completados al 100%
+              {stats.colegiosCompletados} de {locales.length > 0 ? locales.length : 8} colegios completados al 100%
             </p>
           </CardContent>
         </Card>

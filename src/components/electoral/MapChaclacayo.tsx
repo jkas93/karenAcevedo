@@ -1,30 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import type { GeoJsonObject } from 'geojson';
 import { LocalVotacion, Mesa } from '@/lib/firebase/electoral-service';
-import { googleMapsUrl } from '@/lib/electoral/locations';
-
-// Corregir los iconos por defecto de Leaflet en Next.js
-const iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
-const iconUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
-const shadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
-
-const defaultIcon = L.icon({
-  iconRetinaUrl,
-  iconUrl,
-  shadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-});
-
-L.Marker.prototype.options.icon = defaultIcon;
+import { CHACLACAYO_ELECTORAL_LOCATIONS, googleMapsUrl } from '@/lib/electoral/locations';
+import { Layers, MapPin, School, Navigation } from 'lucide-react';
 
 interface MapChaclacayoProps {
   locales: LocalVotacion[];
@@ -39,7 +22,7 @@ function FitLocalBounds({ locales }: { locales: LocalVotacion[] }) {
       .filter((local) => Number.isFinite(local.latitud) && Number.isFinite(local.longitud))
       .map((local) => [local.latitud, local.longitud] as [number, number]);
     if (positions.length === 1) map.setView(positions[0], 15);
-    if (positions.length > 1) map.fitBounds(positions, { padding: [32, 32], maxZoom: 15 });
+    if (positions.length > 1) map.fitBounds(positions, { padding: [40, 40], maxZoom: 15 });
   }, [locales, map]);
 
   return null;
@@ -48,58 +31,109 @@ function FitLocalBounds({ locales }: { locales: LocalVotacion[] }) {
 export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [geoData, setGeoData] = useState<GeoJsonObject | null>(null);
+  const [mapType, setMapType] = useState<'streets' | 'hybrid'>('streets');
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsMounted(true), 10);
-    // Cargar la data oficial en formato GeoJSON
+    const timer = setTimeout(() => setIsMounted(true), 20);
     fetch('/data/zonas-chaclacayo.json')
-      .then(res => res.json())
+      .then((res) => res.json())
       .then((data: unknown) => setGeoData(data as GeoJsonObject))
-      .catch(err => console.error('Error cargando GeoJSON:', err));
+      .catch((err) => console.warn('GeoJSON zonas:', err));
     return () => clearTimeout(timer);
   }, []);
 
+  // Lista de locales: usa los de Firestore y si aún no cargaron, usa los 8 colegios oficiales de Chaclacayo
+  const displayLocales = useMemo(() => {
+    if (locales.length > 0) return locales;
+    return CHACLACAYO_ELECTORAL_LOCATIONS.map((seed) => ({
+      id: `local_${seed.code.toLowerCase()}`,
+      nombre: seed.nombre,
+      direccion: [seed.direccion, seed.referencia].filter(Boolean).join(' · '),
+      latitud: seed.latitud,
+      longitud: seed.longitud,
+      zona_id: seed.zona,
+      total_mesas: seed.mesas,
+    }));
+  }, [locales]);
+
   if (!isMounted) {
     return (
-      <div className="h-[360px] w-full bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400 lg:h-[500px]">
-        Cargando mapa...
+      <div className="flex h-[360px] w-full animate-pulse items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-400 lg:h-[480px]">
+        Cargando mapa electoral de Chaclacayo...
       </div>
     );
   }
 
-  const centerCoordinates: [number, number] = [-11.9818, -76.7651];
+  const centerCoordinates: [number, number] = [-11.9818, -76.772];
+
+  // URL de capas de Google Maps oficial (roadmap vs híbrido/satélite)
+  const tileUrl =
+    mapType === 'streets'
+      ? 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
+      : 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
   return (
-    <div className="h-[360px] w-full overflow-hidden rounded-2xl border border-slate-200 shadow-sm z-0 lg:h-[500px]">
+    <div className="relative h-[360px] w-full overflow-hidden rounded-2xl border border-slate-200 shadow-sm z-0 lg:h-[480px]">
+      {/* Selector de capa Google Maps */}
+      <div className="absolute top-3 right-3 z-[400] flex items-center rounded-xl bg-white/95 p-1 shadow-md backdrop-blur-xs border border-slate-200">
+        <button
+          type="button"
+          onClick={() => setMapType('streets')}
+          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+            mapType === 'streets'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Google Calles
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapType('hybrid')}
+          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+            mapType === 'hybrid'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Satélite
+        </button>
+      </div>
+
       <MapContainer
         center={centerCoordinates}
         zoom={14}
         scrollWheelZoom={true}
         style={{ height: '100%', width: '100%', zIndex: 0 }}
       >
-        <FitLocalBounds locales={locales} />
+        <FitLocalBounds locales={displayLocales} />
+
+        {/* Capa de Google Maps */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          key={mapType}
+          attribution='&copy; Google Maps'
+          url={tileUrl}
+          maxZoom={20}
+          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
         />
 
-        {/* Renderizar los sectores electorales desde GeoJSON */}
+        {/* Zonas electorales poligonales de Chaclacayo */}
         {geoData && (
           <GeoJSON
             data={geoData}
             style={(feature) => ({
-              color: feature?.properties?.color || '#3b82f6',
-              weight: 2.5,
+              color: feature?.properties?.color || '#2563eb',
+              weight: 2,
               fillColor: feature?.properties?.color || '#3b82f6',
-              fillOpacity: 0.15,
-              dashArray: '4, 6'
+              fillOpacity: 0.12,
+              dashArray: '4, 6',
             })}
             onEachFeature={(feature, layer) => {
-              if (feature.properties && feature.properties.nombre) {
+              if (feature.properties?.nombre) {
                 layer.bindPopup(`
-                  <div class="text-center p-1">
-                    <span class="font-black text-xs uppercase tracking-wider text-slate-700 block mb-1">Zona Electoral</span>
-                    <span class="font-bold text-sm text-slate-900">${feature.properties.nombre}</span>
+                  <div style="text-align: center; padding: 4px;">
+                    <span style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: #64748b; display: block;">Sector Electoral</span>
+                    <strong style="font-size: 13px; color: #0f172a;">${feature.properties.nombre}</strong>
                   </div>
                 `);
               }
@@ -107,67 +141,107 @@ export default function MapChaclacayo({ locales, mesas }: MapChaclacayoProps) {
           />
         )}
 
-        {/* Locales de Votación */}
-        {locales.map((local) => {
+        {/* Marcadores de los 8 Colegios Electorales */}
+        {displayLocales.map((local) => {
           const mesasDelLocal = mesas.filter((m) => m.local_id === local.id);
+          const totalMesasLocal = local.total_mesas || mesasDelLocal.length || 1;
           const mesasEnviadas = mesasDelLocal.filter((m) => m.estado === 'enviada').length;
-          const porcentaje = mesasDelLocal.length > 0
-            ? Math.round((mesasEnviadas / mesasDelLocal.length) * 100)
+          const porcentaje = totalMesasLocal > 0
+            ? Math.round((mesasEnviadas / totalMesasLocal) * 100)
             : 0;
 
-          let markerColor = '#ef4444'; // Rojo (0%)
-          if (porcentaje === 100) markerColor = '#10b981'; // Verde (100%)
-          else if (porcentaje > 0) markerColor = '#f97316'; // Naranja (1-99%)
+          // Color del marcador
+          let markerBg = '#2563eb'; // Azul neutro al inicio
+          if (porcentaje === 100) markerBg = '#10b981'; // Verde
+          else if (porcentaje > 0) markerBg = '#f97316'; // Naranja
 
-          const customIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `<div style="
-              background-color: ${markerColor};
-              width: 24px;
-              height: 24px;
-              border-radius: 50%;
-              border: 3px solid white;
-              box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            "></div>`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
+          // Nombre corto para la etiqueta visible
+          const cleanName = local.nombre
+            .replace(/^I\.E\.\s*(\d+\s*)?/i, '')
+            .replace(/^Colegio\s*/i, '')
+            .trim();
+
+          const customLabelIcon = L.divIcon({
+            className: 'custom-school-pin',
+            html: `
+              <div style="
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: white;
+                color: #0f172a;
+                font-family: inherit;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 4px 8px;
+                border-radius: 9999px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.22);
+                border: 2px solid ${markerBg};
+                white-space: nowrap;
+                cursor: pointer;
+                transform: translate(-50%, -50%);
+              ">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${markerBg};"></span>
+                <span>${cleanName}</span>
+                <span style="background: #f1f5f9; color: #475569; font-size: 9px; padding: 1px 4px; border-radius: 4px;">${totalMesasLocal}m</span>
+              </div>
+            `,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0],
           });
 
           return (
-            <Marker key={local.id} position={[local.latitud, local.longitud]} icon={customIcon}>
+            <Marker
+              key={local.id}
+              position={[local.latitud, local.longitud]}
+              icon={customLabelIcon}
+            >
               <Popup>
-                <div className="p-1 min-w-[200px]">
-                  <h3 className="font-bold text-sm text-slate-900 mb-1">{local.nombre}</h3>
-                  <p className="text-xs text-slate-500 mb-2">{local.direccion}</p>
-                  
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs space-y-2">
+                <div className="p-1 min-w-[220px]">
+                  <div className="flex items-start gap-1.5 mb-1">
+                    <span className="text-blue-600 font-bold text-xs uppercase tracking-wider block">
+                      Local de Votación
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-sm text-slate-900 leading-tight mb-1">
+                    {local.nombre}
+                  </h3>
+                  <p className="text-xs text-slate-600 mb-2 leading-snug">
+                    {local.direccion}
+                  </p>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-xs space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-slate-500">Reportadas:</span>
+                      <span className="font-semibold text-slate-500">Avance de Actas:</span>
                       <span className="font-bold text-slate-800">{porcentaje}%</span>
                     </div>
-                    
+
                     <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${porcentaje}%`,
-                          backgroundColor: porcentaje === 100 ? '#10b981' : '#3b82f6'
+                          backgroundColor: porcentaje === 100 ? '#10b981' : '#2563eb',
                         }}
                       />
                     </div>
-                    
+
                     <div className="text-slate-600 text-[11px] pt-1 flex justify-between border-t border-slate-100">
-                      <span>Mesas Enviadas:</span>
-                      <span className="font-semibold text-slate-700">{mesasEnviadas} de {local.total_mesas}</span>
+                      <span>Mesas Reportadas:</span>
+                      <span className="font-bold text-slate-700">
+                        {mesasEnviadas} de {totalMesasLocal}
+                      </span>
                     </div>
                   </div>
+
                   <a
                     href={googleMapsUrl(local.nombre, local.direccion, local.latitud, local.longitud)}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 block rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-bold text-white no-underline"
+                    className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-center text-xs font-bold text-white shadow-xs transition hover:bg-blue-700 no-underline"
                   >
-                    Abrir en Google Maps ↗
+                    <Navigation className="h-3.5 w-3.5" />
+                    <span>Ver en Google Maps ↗</span>
                   </a>
                 </div>
               </Popup>

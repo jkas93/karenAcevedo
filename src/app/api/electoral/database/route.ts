@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 const MAX_ROWS = 5000;
 const MAX_BODY_BYTES = 3 * 1024 * 1024;
 const BATCH_SIZE = 400;
-const COLLECTIONS = ['actas', 'personeros', 'mesas', 'locales'] as const;
+const COLLECTIONS = ['actas', 'mesas', 'locales'] as const;
 
 type ImportRow = {
   mesa: string;
