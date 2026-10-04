@@ -3,25 +3,24 @@
 import { useMemo, useState } from 'react';
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  MapPin,
+  Loader2,
   Navigation,
-  Phone,
+  Pencil,
   School,
-  ShieldAlert,
-  ShieldCheck,
   UserCheck,
-  UserRound,
   Users,
+  X,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   CHACLACAYO_ELECTORAL_LOCATIONS,
-  findElectoralLocation,
   googleMapsUrl,
 } from '@/lib/electoral/locations';
+import { authenticatedPost } from '@/lib/firebase/authenticated-request';
 import type { Acta, LocalVotacion, Mesa, Personero } from '@/lib/firebase/types';
 
 function WhatsAppIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
@@ -44,6 +43,7 @@ interface ColegiosDetallePanelProps {
   personeros: Personero[];
   actas: Acta[];
   onSelectPersonero?: (personero: Personero) => void;
+  canManage?: boolean;
 }
 
 export function ColegiosDetallePanel({
@@ -52,8 +52,20 @@ export function ColegiosDetallePanel({
   personeros,
   actas,
   onSelectPersonero,
+  canManage = true,
 }: ColegiosDetallePanelProps) {
   const [selectedLocalId, setSelectedLocalId] = useState<string | null>(null);
+
+  // Estado para edición directa del coordinador
+  const [overrideCoordinadores, setOverrideCoordinadores] = useState<Record<string, string>>({});
+  const [editingLocalId, setEditingLocalId] = useState<string | null>(null);
+  const [tempCoordinador, setTempCoordinador] = useState('');
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    text: string;
+    localId: string;
+  } | null>(null);
 
   // Unificación de colegios (Firestore o catálogo de Chaclacayo)
   const colegios = useMemo(() => {
@@ -93,8 +105,18 @@ export function ColegiosDetallePanel({
       const escrutinioPct =
         totalMesas > 0 ? Math.round((actasColegio.length / totalMesas) * 100) : 0;
 
+      const finalId = firestoreLocal?.id || docId;
+
+      // Prioridad: 1. Estado local inmediato, 2. Firestore, 3. Semilla predeterminada
+      const coordinadorFinal =
+        overrideCoordinadores[finalId] !== undefined
+          ? overrideCoordinadores[finalId]
+          : firestoreLocal?.coordinador !== undefined
+          ? firestoreLocal.coordinador
+          : seed.coordinador || '';
+
       return {
-        id: firestoreLocal?.id || docId,
+        id: finalId,
         seedCode: seed.code,
         numero: idx + 1,
         nombre: seed.nombre,
@@ -103,7 +125,7 @@ export function ColegiosDetallePanel({
         zona: seed.zona,
         latitud: seed.latitud,
         longitud: seed.longitud,
-        coordinador: seed.coordinador,
+        coordinador: coordinadorFinal,
         totalMesas,
         mesas: mesasColegio,
         personeros: personerosColegio,
@@ -113,7 +135,7 @@ export function ColegiosDetallePanel({
         escrutinioPct,
       };
     });
-  }, [locales, mesas, personeros, actas]);
+  }, [locales, mesas, personeros, actas, overrideCoordinadores]);
 
   // Resumen global de los 8 colegios
   const resumen = useMemo(() => {
@@ -132,6 +154,56 @@ export function ColegiosDetallePanel({
       coberturaGlobal,
     };
   }, [colegios]);
+
+  // Guardar coordinador directo en la API y persistir en Firestore
+  const handleSaveCoordinator = async (col: { id: string; nombre: string; shortName: string }) => {
+    const nuevoCoordinador = tempCoordinador.trim();
+    setSavingId(col.id);
+    setFeedback(null);
+
+    try {
+      const res = await authenticatedPost<{
+        success: boolean;
+        coordinador: string;
+        localId: string;
+      }>('/api/electoral/locales', {
+        action: 'updateCoordinator',
+        localId: col.id,
+        coordinador: nuevoCoordinador,
+        nombre: col.nombre,
+        shortName: col.shortName,
+      });
+
+      if (res?.success) {
+        setOverrideCoordinadores((prev) => ({
+          ...prev,
+          [col.id]: nuevoCoordinador,
+        }));
+        setEditingLocalId(null);
+        setFeedback({
+          type: 'success',
+          text: `Coordinador de ${col.shortName} actualizado correctamente.`,
+          localId: col.id,
+        });
+
+        // Limpiar mensaje tras 4 segundos
+        setTimeout(() => {
+          setFeedback((current) => (current?.localId === col.id ? null : current));
+        }, 4000);
+      } else {
+        throw new Error('No se pudo confirmar la actualización en el servidor.');
+      }
+    } catch (err: any) {
+      console.error('Error al actualizar coordinador:', err);
+      setFeedback({
+        type: 'error',
+        text: err?.message || 'Error al guardar el coordinador en el servidor.',
+        localId: col.id,
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -178,6 +250,8 @@ export function ColegiosDetallePanel({
         {colegios.map((col) => {
           const isSelected = selectedLocalId === col.id;
           const mapsUrl = googleMapsUrl(col.nombre, col.direccion, col.latitud, col.longitud);
+          const isEditingThis = editingLocalId === col.id;
+          const isSavingThis = savingId === col.id;
 
           return (
             <Card
@@ -224,15 +298,120 @@ export function ColegiosDetallePanel({
                   </a>
                 </div>
 
-                {/* Coordinador del colegio */}
-                {col.coordinador && (
-                  <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-xs border border-slate-100">
-                    <span className="text-slate-500 font-medium">
-                      Coordinador: <strong className="text-slate-800">{col.coordinador}</strong>
-                    </span>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                      En funciones
-                    </span>
+                {/* Coordinador del colegio - Editable Directamente */}
+                {isEditingThis ? (
+                  <div className="mt-3 rounded-xl bg-blue-50/90 p-2.5 border border-blue-200 shadow-2xs">
+                    <div className="flex items-center justify-between text-xs font-bold text-blue-900 mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                        Coordinador de {col.shortName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingLocalId(null);
+                          setFeedback(null);
+                        }}
+                        className="text-slate-400 hover:text-slate-600 rounded p-0.5 cursor-pointer"
+                        title="Cancelar edición"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        type="text"
+                        value={tempCoordinador}
+                        onChange={(e) => setTempCoordinador(e.target.value)}
+                        placeholder="Nombre y apellido del coordinador..."
+                        disabled={isSavingThis}
+                        className="flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveCoordinator(col);
+                          if (e.key === 'Escape') setEditingLocalId(null);
+                        }}
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button
+                          type="button"
+                          disabled={isSavingThis}
+                          onClick={() => handleSaveCoordinator(col)}
+                          className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition shadow-2xs cursor-pointer"
+                        >
+                          {isSavingThis ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                          <span>Guardar</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSavingThis}
+                          onClick={() => setEditingLocalId(null)}
+                          className="min-h-8 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-xs border border-slate-100 gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                      <span className="text-slate-500 font-medium shrink-0">Coordinador:</span>
+                      {col.coordinador ? (
+                        <strong className="text-slate-800 truncate" title={col.coordinador}>
+                          {col.coordinador}
+                        </strong>
+                      ) : (
+                        <span className="text-slate-400 italic">Sin coordinador asignado</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {col.coordinador ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          En funciones
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          Pendiente
+                        </span>
+                      )}
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingLocalId(col.id);
+                            setTempCoordinador(col.coordinador || '');
+                            setFeedback(null);
+                          }}
+                          title="Editar nombre del coordinador"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 transition shadow-2xs cursor-pointer"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Notificación de feedback específico */}
+                {feedback && feedback.localId === col.id && (
+                  <div
+                    className={`mt-2 flex items-center gap-1.5 rounded-lg p-2 text-xs font-medium border ${
+                      feedback.type === 'success'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-red-200 bg-red-50 text-red-800'
+                    }`}
+                  >
+                    {feedback.type === 'success' ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                    )}
+                    <span>{feedback.text}</span>
                   </div>
                 )}
               </CardHeader>
@@ -302,7 +481,7 @@ export function ColegiosDetallePanel({
                   <button
                     type="button"
                     onClick={() => setSelectedLocalId(isSelected ? null : col.id)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 transition cursor-pointer"
                   >
                     <span>{isSelected ? 'Ocultar mesas y personal' : 'Ver detalle de mesas'}</span>
                     {isSelected ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -366,9 +545,20 @@ export function ColegiosDetallePanel({
 
                     {/* Personeros asignados en este colegio */}
                     <div className="pt-2 border-t border-slate-200">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                        Personeros asignados a este local ({col.personeros.length})
-                      </h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
+                          Personeros asignados a este local ({col.personeros.length})
+                        </h4>
+                        {onSelectPersonero && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectPersonero(col.personeros[0])}
+                            className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                          >
+                            Ir al Padrón →
+                          </button>
+                        )}
+                      </div>
                       {col.personeros.length === 0 ? (
                         <p className="text-xs italic text-slate-400 bg-white p-3 rounded-xl border border-slate-200 text-center">
                           Aún no hay personeros asignados a este colegio. Puedes asignarles este local desde el Padrón de Personeros.

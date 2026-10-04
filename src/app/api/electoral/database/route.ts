@@ -18,6 +18,7 @@ type ImportRow = {
   local: string;
   direccion?: string;
   zona?: string;
+  coordinador?: string;
   latitud?: number;
   longitud?: number;
 };
@@ -70,6 +71,7 @@ function standardRows(): ImportRow[] {
       local: location.nombre,
       direccion: [location.direccion, location.referencia].filter(Boolean).join(' · '),
       zona: location.zona,
+      coordinador: location.coordinador,
       latitud: location.latitud,
       longitud: location.longitud,
     })),
@@ -99,6 +101,7 @@ function buildDocuments(db: Firestore, rows: ImportRow[]) {
       data: {
         nombre: local.local,
         direccion: local.direccion || 'Dirección no especificada',
+        coordinador: local.coordinador || '',
         zona_id: local.zona || 'General',
         latitud: local.latitud ?? -11.9818 + jitter(local.local, 1),
         longitud: local.longitud ?? -76.7651 + jitter(local.local, 2),

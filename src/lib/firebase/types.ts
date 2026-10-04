@@ -29,6 +29,7 @@ export type LocalVotacion = {
   id: string;
   nombre: string;
   direccion: string;
+  coordinador?: string;
   latitud: number;
   longitud: number;
   zona_id: string;

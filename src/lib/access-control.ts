@@ -68,7 +68,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   candidata: withPermissions(
     'calendar.view', 'calendar.manage',
     'volunteers.view', 'volunteers.manage',
-    'electoral.view',
+    'electoral.view', 'electoral.manage',
   ),
   digitador: withPermissions('electoral.view', 'calendar.view', 'actas.view', 'actas.manage'),
   usuario: withPermissions('electoral.view', 'calendar.view', 'volunteers.view', 'volunteers.manage'),

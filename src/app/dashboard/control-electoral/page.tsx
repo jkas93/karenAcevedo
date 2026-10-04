@@ -548,6 +548,7 @@ export default function ControlElectoralDashboard() {
             personeros={personeros}
             actas={actas}
             onSelectPersonero={() => setActiveTab('personeros')}
+            canManage={hasPermission('electoral.manage')}
           />
         </div>
       )}
