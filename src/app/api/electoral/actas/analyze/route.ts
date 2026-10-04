@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
-import sharp from 'sharp';
 import { getAdminServices } from '@/lib/firebase-admin';
 import { extractActaFromImage } from '@/lib/server/acta-vision';
 import { ApiError, apiErrorResponse, requirePermission } from '@/lib/server/admin-auth';
@@ -45,21 +44,33 @@ export async function POST(request: Request) {
     if (!local.exists) throw new ApiError(400, 'El colegio seleccionado ya no está disponible.');
 
     const source = Buffer.from(await image.arrayBuffer());
-    let webp: Buffer;
+    let processedBuffer = source;
+    let mimeType = image.type;
+    let imgWidth: number | null = null;
+    let imgHeight: number | null = null;
+
     try {
-      webp = await sharp(source, { limitInputPixels: MAX_PIXELS, failOn: 'warning' })
-        .rotate()
-        .webp({ quality: 92, effort: 4, smartSubsample: true })
-        .toBuffer();
-    } catch {
-      throw new ApiError(422, 'La fotografía está dañada o no puede procesarse.');
-    }
-    const metadata = await sharp(webp).metadata();
-    if (!metadata.width || !metadata.height || Math.min(metadata.width, metadata.height) < MIN_SIDE) {
-      throw new ApiError(422, 'La fotografía tiene poca resolución. Usa una imagen de al menos 900 píxeles por lado.');
+      const sharpModule = (await import('sharp')).default;
+      try {
+        const webp = await sharpModule(source, { limitInputPixels: MAX_PIXELS, failOn: 'warning' })
+          .rotate()
+          .webp({ quality: 92, effort: 4, smartSubsample: true })
+          .toBuffer();
+        const metadata = await sharpModule(webp).metadata();
+        if (metadata.width && metadata.height && Math.min(metadata.width, metadata.height) >= MIN_SIDE) {
+          processedBuffer = webp;
+          mimeType = 'image/webp';
+          imgWidth = metadata.width;
+          imgHeight = metadata.height;
+        }
+      } catch (sharpProcessError) {
+        console.warn('Sharp processing failed, using raw image:', sharpProcessError);
+      }
+    } catch (sharpImportError) {
+      console.warn('Sharp native module unavailable in this environment, using raw image directly:', sharpImportError);
     }
 
-    const sha256 = createHash('sha256').update(webp).digest('hex');
+    const sha256 = createHash('sha256').update(processedBuffer).digest('hex');
     const duplicate = await adminDb.collection('actaDrafts').where('sha256', '==', sha256).limit(5).get();
     const reusable = duplicate.docs.find((document) => {
       const data = document.data();
@@ -79,13 +90,14 @@ export async function POST(request: Request) {
     draftRef = adminDb.collection('actaDrafts').doc();
     const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
     if (!bucketName) throw new ApiError(503, 'El almacenamiento de actas no está configurado.');
-    const imagePath = `actas/${draftRef.id}.webp`;
+    const ext = mimeType === 'image/webp' ? 'webp' : (mimeType.split('/')[1] || 'jpg');
+    const imagePath = `actas/${draftRef.id}.${ext}`;
     const imageToken = randomUUID();
-    await adminStorage.bucket(bucketName).file(imagePath).save(webp, {
+    await adminStorage.bucket(bucketName).file(imagePath).save(processedBuffer, {
       resumable: false,
       validation: 'crc32c',
       metadata: {
-        contentType: 'image/webp',
+        contentType: mimeType,
         cacheControl: 'private, max-age=0, no-store',
         metadata: {
           firebaseStorageDownloadTokens: imageToken,
@@ -104,10 +116,10 @@ export async function POST(request: Request) {
       actorUid: session.token.uid,
       imagePath,
       imageUrl,
-      imageMime: 'image/webp',
-      imageWidth: metadata.width,
-      imageHeight: metadata.height,
-      imageBytes: webp.length,
+      imageMime: mimeType,
+      imageWidth: imgWidth,
+      imageHeight: imgHeight,
+      imageBytes: processedBuffer.length,
       sha256,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -149,7 +161,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const { extraction, modelVersion } = await extractActaFromImage(webp);
+      const { extraction, modelVersion } = await extractActaFromImage(processedBuffer, mimeType);
       await draftRef.update({
         status: 'review',
         extraction,

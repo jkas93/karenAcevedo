@@ -26,6 +26,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['sharp'],
   poweredByHeader: false,
   images: {
     remotePatterns: [

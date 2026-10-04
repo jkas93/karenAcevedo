@@ -105,7 +105,10 @@ type GeminiResponse = {
   modelVersion?: string;
 };
 
-export async function extractActaFromImage(image: Buffer): Promise<{
+export async function extractActaFromImage(
+  image: Buffer,
+  mimeType = 'image/webp',
+): Promise<{
   extraction: ExtraccionActa;
   modelVersion: string;
 }> {
@@ -152,7 +155,7 @@ export async function extractActaFromImage(image: Buffer): Promise<{
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [
             { text: PROMPT },
-            { inlineData: { mimeType: 'image/webp', data: image.toString('base64') } },
+            { inlineData: { mimeType, data: image.toString('base64') } },
           ] }],
           generationConfig: {
             temperature: 0,
