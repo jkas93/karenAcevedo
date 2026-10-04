@@ -68,3 +68,32 @@ test('impide guardar si las sumas o el padrón no cuadran', () => {
   assert.equal(validation.errors.some((message) => message.includes('suma distrital')), true);
   assert.equal(validation.errors.some((message) => message.includes('electores hábiles')), true);
 });
+
+test('acepta una hoja de conteo distrital con solo votos distritales', () => {
+  const distritalOnly = {
+    mesaNumero: '041295',
+    departamento: 'Lima',
+    provincia: 'Lima',
+    distrito: 'Chaclacayo',
+    electoresHabiles: 300,
+    resultados: [
+      { orden: 1, organizacion: 'Alianza para el Progreso', provincial: null, distrital: 45 },
+      { orden: 9, organizacion: 'Fuerza Ciudadana', provincial: null, distrital: 120 },
+    ],
+    especiales: {
+      blancos: { provincial: null, distrital: 5 },
+      nulos: { provincial: null, distrital: 10 },
+      impugnados: { provincial: null, distrital: 0 },
+    },
+    totalesEmitidos: { provincial: null, distrital: 180 },
+    ciudadanosVotaron: 180,
+    observaciones: 'Hoja de personero distrital',
+    confianzaGeneral: 0.95,
+    advertencias: [],
+  };
+  const validation = validateFinalActa(distritalOnly);
+  assert.deepEqual(validation.errors, []);
+  assert.equal(validation.totalProvincial, 0);
+  assert.equal(validation.totalDistrital, 180);
+});
+

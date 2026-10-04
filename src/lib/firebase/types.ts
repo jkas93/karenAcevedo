@@ -145,13 +145,6 @@ export type Partido = {
 
 export const PARTIDOS_CHACLACAYO: Partido[] = [
   {
-    id: 'fuerza_ciudadana',
-    nombre: 'Fuerza Ciudadana',
-    alias: 'Fuerza Ciudadana',
-    color: '#0070C0',   // Azul primario de la campaña Karen Acevedo
-    esPropio: true,
-  },
-  {
     id: 'alianza_para_el_progreso',
     nombre: 'Alianza para el Progreso',
     alias: 'Alianza para el Progreso',
@@ -206,6 +199,13 @@ export const PARTIDOS_CHACLACAYO: Partido[] = [
     alias: 'Avanza País',
     color: '#1d4ed8',   // Azul royal
     esPropio: false,
+  },
+  {
+    id: 'fuerza_ciudadana',
+    nombre: 'Fuerza Ciudadana',
+    alias: 'Fuerza Ciudadana',
+    color: '#0070C0',   // Azul primario de la campaña Karen Acevedo
+    esPropio: true,
   },
   {
     id: 'pais_para_todos',

@@ -45,14 +45,24 @@ export async function POST(request: Request) {
       }
       if (draft.data()?.localId !== localId) throw new ApiError(409, 'El colegio no coincide con el borrador analizado.');
       if (!local.exists) throw new ApiError(400, 'El colegio seleccionado ya no existe.');
-      if (currentActa.exists) throw new ApiError(409, `La mesa ${mesaNumero} ya tiene un acta confirmada.`);
+      const isRectification = currentActa.exists;
+      if (isRectification) {
+        if (!body.rectificar) {
+          throw new ApiError(409, `La mesa ${mesaNumero} ya tiene un acta confirmada. Si necesitas corregirla, confirma con opción de rectificación.`);
+        }
+        if (session.role !== 'superusuario' && session.role !== 'administrador') {
+          throw new ApiError(403, 'Solo un Administrador o Modo Dios tiene autorización para rectificar actas ya confirmadas.');
+        }
+      }
 
       const globalCount = Number(globalCounter.data()?.confirmed || 0);
       const localCount = Number(localCounter.data()?.confirmed || 0);
       const localLimit = Number(local.data()?.total_mesas || 0);
-      if (globalCount >= ACTAS_ESPERADAS) throw new ApiError(409, `Ya se confirmaron las ${ACTAS_ESPERADAS} actas esperadas.`);
-      if (localLimit > 0 && localCount >= localLimit) {
-        throw new ApiError(409, 'Este colegio ya completó todas sus actas esperadas.');
+      if (!isRectification) {
+        if (globalCount >= ACTAS_ESPERADAS) throw new ApiError(409, `Ya se confirmaron las ${ACTAS_ESPERADAS} actas esperadas.`);
+        if (localLimit > 0 && localCount >= localLimit) {
+          throw new ApiError(409, 'Este colegio ya completó todas sus actas esperadas.');
+        }
       }
 
       const districtResults = extraction.resultados.map((result) => result.distrital ?? 0);
@@ -90,26 +100,64 @@ export async function POST(request: Request) {
         timestamp: FieldValue.serverTimestamp(),
       };
 
-      transaction.create(actaRef, actaData);
-      transaction.create(mesaRef, {
-        numero: mesaNumero,
-        local_id: localId,
-        estado: 'enviada',
-        source: 'acta',
-        acta_id: mesaNumero,
-        created_at: FieldValue.serverTimestamp(),
-      });
-      transaction.set(globalCounterRef, {
-        confirmed: globalCount + 1,
-        expected: ACTAS_ESPERADAS,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      transaction.set(localCounterRef, {
-        localId,
-        confirmed: localCount + 1,
-        expected: localLimit,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+      if (isRectification) {
+        transaction.set(actaRef, {
+          ...actaData,
+          rectificada_por: session.email,
+          rectificada_at: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(mesaRef, {
+          numero: mesaNumero,
+          local_id: localId,
+          estado: 'enviada',
+          source: 'acta',
+          acta_id: mesaNumero,
+          updated_at: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(auditRef, {
+          action: 'acta.rectify',
+          actaId: mesaNumero,
+          mesaNumero,
+          localId,
+          draftId,
+          actor: session.email,
+          previousExtraction: currentActa.data()?.resultados || null,
+          finalExtraction: extraction,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        transaction.create(actaRef, actaData);
+        transaction.create(mesaRef, {
+          numero: mesaNumero,
+          local_id: localId,
+          estado: 'enviada',
+          source: 'acta',
+          acta_id: mesaNumero,
+          created_at: FieldValue.serverTimestamp(),
+        });
+        transaction.set(globalCounterRef, {
+          confirmed: globalCount + 1,
+          expected: ACTAS_ESPERADAS,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.set(localCounterRef, {
+          localId,
+          confirmed: localCount + 1,
+          expected: localLimit,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.set(auditRef, {
+          action: 'acta.confirm',
+          actaId: mesaNumero,
+          mesaNumero,
+          localId,
+          draftId,
+          actor: session.email,
+          originalExtraction: draft.data()?.extraction || null,
+          finalExtraction: extraction,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      }
       transaction.update(draftRef, {
         status: 'confirmed',
         mesaNumero,
@@ -117,17 +165,6 @@ export async function POST(request: Request) {
         confirmedAt: FieldValue.serverTimestamp(),
         finalExtraction: extraction,
         updatedAt: FieldValue.serverTimestamp(),
-      });
-      transaction.set(auditRef, {
-        action: 'acta.confirm',
-        actaId: mesaNumero,
-        mesaNumero,
-        localId,
-        draftId,
-        actor: session.email,
-        originalExtraction: draft.data()?.extraction || null,
-        finalExtraction: extraction,
-        createdAt: FieldValue.serverTimestamp(),
       });
     });
 

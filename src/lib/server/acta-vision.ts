@@ -76,28 +76,40 @@ const RESPONSE_SCHEMA = {
   ],
 };
 
-const PROMPT = `Analiza exclusivamente el acta de escrutinio electoral oficial de la ONPE (Elecciones Regionales y Municipales 2026) contenida en la imagen.
-El documento cuenta con dos columnas de votos: "TOTAL DE VOTOS MUNICIPAL PROVINCIAL" y "TOTAL DE VOTOS MUNICIPAL DISTRITAL" (esta última es prioritaria para la alcaldía distrital).
-En el distrito de Chaclacayo participan las siguientes 12 organizaciones políticas en la tabla:
-  1. Fuerza Ciudadana
-  2. Alianza para el Progreso
-  3. Partido Político Nacional Perú Libre
-  4. Juntos por el Perú
-  5. Acción Popular
-  6. Renovación Popular
-  7. Fe en el Perú
-  8. Partido Demócrata Verde
-  9. Avanza País Partido de Integración Social
-  10. Partido País para Todos
-  11. Somos Perú
-  12. Podemos Perú
-Asocia cada fila al nombre oficial correspondiente según el orden y símbolo de la tabla.
-Extrae de forma literal los números manuscritos de ambas columnas.
-Extrae también las filas especiales obligatorias: VOTOS EN BLANCO, VOTOS NULOS y VOTOS IMPUGNADOS.
-Extrae los totales: TOTAL DE VOTOS EMITIDOS (provincial y distrital) y TOTAL DE CIUDADANOS QUE VOTARON.
-No sumes, no alteres y no inventes datos. Si una casilla está vacía en votos especiales interpreta como 0. Si un número es ilegible devuelve null.
-Ignora firmas, nombres y documentos de identidad de miembros de mesa y personeros.
-La confianza general debe estar entre 0 y 1. Añade advertencias para cifras dudosas o desenfoque.`;
+const PROMPT = `Analiza la imagen electoral del distrito de Chaclacayo (Elecciones Municipales 2026).
+La imagen puede ser:
+1. Una hoja de "CONTEO DE VOTOS ELECCIONES MUNICIPALES 2026 DISTRITO DE CHACLACAYO" (hoja de personero), que contiene una sola columna de "VOTOS". En este caso, asigna los votos extraídos a la columna "distrital" y deja "provincial" en null.
+2. Un acta oficial de escrutinio de la ONPE con dos columnas: "TOTAL DE VOTOS MUNICIPAL PROVINCIAL" y "TOTAL DE VOTOS MUNICIPAL DISTRITAL". En este caso, extrae ambas columnas.
+
+La mesa electoral se encuentra en la cabecera ("MESA Nº:"). Extrae el número de mesa.
+En el distrito de Chaclacayo participan exactamente las siguientes 12 organizaciones políticas en este orden oficial:
+  1. Alianza para el Progreso (Símbolo: A)
+  2. Partido Político Nacional Perú Libre (Símbolo: Lápiz)
+  3. Juntos por el Perú (Símbolo: JP)
+  4. Acción Popular (Símbolo: Lampa)
+  5. Renovación Popular (Símbolo: R)
+  6. Fe en el Perú (Símbolo: Fe en el Perú)
+  7. Partido Demócrata Verde (Símbolo: V)
+  8. Avanza País Partido de Integración Social (Símbolo: Tren)
+  9. Fuerza Ciudadana (Símbolo: Sol Fuerza Ciudadana)
+  10. Partido País para Todos (Símbolo: Pista / Carretera)
+  11. Somos Perú (Símbolo: Corazón)
+  12. Podemos Perú (Símbolo: P)
+
+Asocia cada fila al nombre oficial de la organización según el número de fila (1 al 12) y su símbolo.
+Extrae también las filas de votos especiales:
+  - VOTOS EN BLANCO (Fila 13)
+  - VOTOS NULOS (Fila 14)
+  - VOTOS IMPUGNADOS
+Y la fila de "TOTAL DE VOTOS" (o TOTAL DE VOTOS EMITIDOS).
+
+Reglas estrictas:
+- Extrae de forma literal los números manuscritos.
+- No sumes, no alteres y no inventes datos.
+- Si una casilla especial está en blanco o con guión, interpreta como 0.
+- Si un número es ilegible, devuelve null.
+- Ignora nombres de personeros, firmas y horas.
+- La confianza general debe ser un número entre 0 y 1. Agrega advertencias si la imagen tiene sombras o números dudosos.`;
 
 type GeminiResponse = {
   error?: { code?: number; message?: string; status?: string };

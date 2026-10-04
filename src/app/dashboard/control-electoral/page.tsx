@@ -124,7 +124,11 @@ export default function ControlElectoralDashboard() {
       });
       return { name: result.name, Votos: result.votes, color: known?.color || RESULT_COLORS[index % RESULT_COLORS.length] };
     });
-    const votosA = actas.reduce((acc, curr) => acc + districtVotesForParty(curr, 0), 0);
+    const propioIndex = PARTIDOS_CHACLACAYO.findIndex((p) => p.esPropio);
+    const votosA = actas.reduce(
+      (acc, curr) => acc + districtVotesForParty(curr, propioIndex >= 0 ? propioIndex : 8),
+      0,
+    );
     const rivalTotals = organizationTotals
       .filter((org) => {
         const propio = PARTIDOS_CHACLACAYO.find((p) => p.esPropio);
@@ -735,11 +739,16 @@ export default function ControlElectoralDashboard() {
                       filteredActas.map((acta) => {
                         const mesa = mesas.find((m) => m.id === acta.mesa_id || m.numero === acta.mesa_id);
                         const local = locales.find((l) => l.id === (acta.local_id || mesa?.local_id));
-                        const votosPropio = districtVotesForParty(acta, 0);
-                        const rivalesMesa = PARTIDOS_CHACLACAYO.slice(1).map((p, idx) => ({
-                          name: p.alias,
-                          votos: districtVotesForParty(acta, idx + 1),
-                        })).sort((a, b) => b.votos - a.votos);
+                        const propioPartyIndex = PARTIDOS_CHACLACAYO.findIndex((p) => p.esPropio);
+                        const votosPropio = districtVotesForParty(acta, propioPartyIndex >= 0 ? propioPartyIndex : 8);
+                        const rivalesMesa = PARTIDOS_CHACLACAYO
+                          .map((p, idx) => ({ party: p, index: idx }))
+                          .filter(({ party }) => !party.esPropio)
+                          .map(({ party, index }) => ({
+                            name: party.alias,
+                            votos: districtVotesForParty(acta, index),
+                          }))
+                          .sort((a, b) => b.votos - a.votos);
                         const segundoMesa = rivalesMesa[0] || { name: 'Segundo', votos: 0 };
                         const totalMesa = acta.totales_emitidos?.distrital ??
                           (acta.votos_partido_a || 0) +

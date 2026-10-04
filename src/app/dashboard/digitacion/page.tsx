@@ -58,8 +58,9 @@ function parsedCount(value: string): number | null {
 }
 
 export default function DigitacionCentralPage() {
-  const { hasPermission } = useAccess();
+  const { role, hasPermission } = useAccess();
   const canManage = hasPermission('actas.manage');
+  const isAdminOrSuper = role === 'superusuario' || role === 'administrador';
   const { locales, actas, loading } = useElectoral();
   const [localId, setLocalId] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -68,6 +69,8 @@ export default function DigitacionCentralPage() {
   const [draftId, setDraftId] = useState('');
   const [extraction, setExtraction] = useState<ExtraccionActa | null>(null);
   const [error, setError] = useState('');
+  const [columnMode, setColumnMode] = useState<'distrital' | 'completo'>('distrital');
+  const [rectificar, setRectificar] = useState(false);
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -80,6 +83,32 @@ export default function DigitacionCentralPage() {
     [extraction],
   );
 
+  const mesaExiste = Boolean(
+    extraction?.mesaNumero &&
+    actas.some((a) => (a.mesa_numero || a.mesa_id) === extraction.mesaNumero),
+  );
+
+  const sumaDistritalCalculada = useMemo(() => {
+    if (!extraction) return 0;
+    const orgs = extraction.resultados.reduce((acc, curr) => acc + (curr.distrital || 0), 0);
+    const esp = (extraction.especiales.blancos.distrital || 0) +
+                (extraction.especiales.nulos.distrital || 0) +
+                (extraction.especiales.impugnados.distrital || 0);
+    return orgs + esp;
+  }, [extraction]);
+
+  const aplicarSumaDistrital = () => {
+    if (!extraction) return;
+    setExtraction({
+      ...extraction,
+      totalesEmitidos: {
+        ...extraction.totalesEmitidos,
+        distrital: sumaDistritalCalculada,
+      },
+      ciudadanosVotaron: extraction.ciudadanosVotaron ?? sumaDistritalCalculada,
+    });
+  };
+
   const reset = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setImageFile(null);
@@ -88,6 +117,7 @@ export default function DigitacionCentralPage() {
     setDraftId('');
     setExtraction(null);
     setError('');
+    setRectificar(false);
   };
 
   const chooseImage = (file?: File) => {
@@ -152,10 +182,14 @@ export default function DigitacionCentralPage() {
 
   const finalize = async () => {
     if (!extraction || !draftId || !localId || !validation || validation.errors.length > 0) return;
+    if (mesaExiste && !rectificar) {
+      setError(`La mesa ${extraction.mesaNumero} ya está confirmada. Activa la opción de rectificación para actualizarla.`);
+      return;
+    }
     setStage('saving');
     setError('');
     try {
-      await authenticatedPost('/api/electoral/actas/finalize', { draftId, localId, extraction });
+      await authenticatedPost('/api/electoral/actas/finalize', { draftId, localId, extraction, rectificar });
       setStage('success');
     } catch (saveError) {
       setError(errorMessage(saveError));
@@ -305,29 +339,244 @@ export default function DigitacionCentralPage() {
                         </label>
                       </div>
 
-                      <div className="overflow-x-auto rounded-xl border border-slate-200">
-                        <table className="w-full min-w-[600px] text-sm">
+                      {/* Selector de modo de columnas */}
+                      <div className="flex items-center justify-between gap-2 p-1.5 bg-slate-100 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setColumnMode('distrital')}
+                          className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
+                            columnMode === 'distrital'
+                              ? 'bg-white text-primary shadow-sm border border-slate-200'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          📋 Hoja de Conteo Distrital (1 col.)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setColumnMode('completo')}
+                          className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
+                            columnMode === 'completo'
+                              ? 'bg-white text-primary shadow-sm border border-slate-200'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          🏛️ Acta ONPE (Provincial + Distrital)
+                        </button>
+                      </div>
+
+                      {/* Advertencia si la mesa ya existe */}
+                      {mesaExiste && (
+                        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-900">
+                          <p className="font-bold flex items-center gap-1.5">
+                            ⚠️ La mesa {extraction.mesaNumero} ya cuenta con un acta confirmada.
+                          </p>
+                          <p className="text-xs text-amber-800 mt-1">
+                            Para rectificarla, activa la opción de rectificación a continuación:
+                          </p>
+                          {isAdminOrSuper ? (
+                            <label className="mt-2.5 inline-flex items-center gap-2 cursor-pointer font-bold text-xs bg-amber-100/90 px-3 py-2 rounded-lg border border-amber-300">
+                              <input
+                                type="checkbox"
+                                checked={rectificar}
+                                onChange={(e) => setRectificar(e.target.checked)}
+                                className="h-4 w-4 rounded text-primary focus:ring-primary"
+                              />
+                              <span>Autorizar rectificación de esta acta (Auditable)</span>
+                            </label>
+                          ) : (
+                            <p className="text-xs text-amber-700 font-semibold mt-1">
+                              (Solo usuarios con rol Administrador o Modo Dios pueden rectificar actas).
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Barra de suma rápida automática */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs">
+                        <div>
+                          <span className="font-semibold text-slate-600">Suma calculada de votos distritales: </span>
+                          <span className="font-black text-blue-900 text-sm">{sumaDistritalCalculada}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={aplicarSumaDistrital}
+                          className="px-3 py-1.5 bg-primary text-white font-bold rounded-lg hover:bg-primary-dark transition text-xs shadow-sm"
+                        >
+                          Copiar suma a Total de Votos
+                        </button>
+                      </div>
+
+                      {/* Tabla adaptativa */}
+                      <div className={`rounded-xl border border-slate-200 ${columnMode === 'completo' ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
+                        <table className={`w-full text-sm ${columnMode === 'completo' ? 'min-w-[600px]' : ''}`}>
                           <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
-                            <tr><th className="px-3 py-2 text-left">Organización política</th><th className="w-28 px-3 py-2">Provincial</th><th className="w-28 px-3 py-2">Distrital</th><th className="w-10" /></tr>
+                            <tr>
+                              <th className="w-8 px-2 py-2 text-center">N°</th>
+                              <th className="px-3 py-2 text-left">Organización política</th>
+                              {columnMode === 'completo' && <th className="w-24 px-2 py-2 text-center">Provincial</th>}
+                              <th className={`${columnMode === 'distrital' ? 'w-28' : 'w-24'} px-2 py-2 text-center`}>
+                                {columnMode === 'distrital' ? 'Votos' : 'Distrital'}
+                              </th>
+                              <th className="w-10" />
+                            </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {extraction.resultados.map((result, index) => (
-                              <tr key={`${result.orden}-${index}`}>
-                                <td className="p-2"><input value={result.organizacion} onChange={(event) => setExtraction({ ...extraction, resultados: extraction.resultados.map((item, itemIndex) => itemIndex === index ? { ...item, organizacion: event.target.value } : item) })} className="w-full rounded-md border border-slate-200 px-2 py-2 font-semibold" /></td>
-                                {(['provincial', 'distrital'] as const).map((column) => <td key={column} className="p-2"><input type="number" min="0" value={numberValue(result[column])} onChange={(event) => setExtraction({ ...extraction, resultados: extraction.resultados.map((item, itemIndex) => itemIndex === index ? { ...item, [column]: parsedCount(event.target.value) } : item) })} className="w-full rounded-md border border-slate-200 px-2 py-2 text-center font-black" /></td>)}
-                                <td className="p-2"><button type="button" onClick={() => setExtraction({ ...extraction, resultados: extraction.resultados.filter((_, itemIndex) => itemIndex !== index) })} className="rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={`Eliminar ${result.organizacion}`}><Trash2 size={16} /></button></td>
-                              </tr>
-                            ))}
+                            {extraction.resultados.map((result, index) => {
+                              const isFuerzaCiudadana = result.organizacion.toLowerCase().includes('fuerza ciudadana');
+                              return (
+                                <tr
+                                  key={`${result.orden}-${index}`}
+                                  className={isFuerzaCiudadana ? 'bg-blue-50/60 font-semibold' : ''}
+                                >
+                                  <td className="px-2 py-2 text-center text-xs font-bold text-slate-400">
+                                    {result.orden || index + 1}
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <input
+                                        value={result.organizacion}
+                                        onChange={(event) =>
+                                          setExtraction({
+                                            ...extraction,
+                                            resultados: extraction.resultados.map((item, itemIndex) =>
+                                              itemIndex === index ? { ...item, organizacion: event.target.value } : item,
+                                            ),
+                                          })
+                                        }
+                                        className={`w-full rounded-md border border-slate-200 px-2 py-1.5 text-xs sm:text-sm font-semibold ${
+                                          isFuerzaCiudadana ? 'border-blue-300 text-blue-900 bg-white' : ''
+                                        }`}
+                                      />
+                                      {isFuerzaCiudadana && (
+                                        <span className="inline-block text-[10px] uppercase font-black bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                          Karen Acevedo · Propio
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  {columnMode === 'completo' && (
+                                    <td className="p-2">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={numberValue(result.provincial)}
+                                        onChange={(event) =>
+                                          setExtraction({
+                                            ...extraction,
+                                            resultados: extraction.resultados.map((item, itemIndex) =>
+                                              itemIndex === index ? { ...item, provincial: parsedCount(event.target.value) } : item,
+                                            ),
+                                          })
+                                        }
+                                        className="w-full rounded-md border border-slate-200 px-2 py-2 text-center font-black text-base"
+                                      />
+                                    </td>
+                                  )}
+                                  <td className="p-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={numberValue(result.distrital)}
+                                      onChange={(event) =>
+                                        setExtraction({
+                                          ...extraction,
+                                          resultados: extraction.resultados.map((item, itemIndex) =>
+                                            itemIndex === index ? { ...item, distrital: parsedCount(event.target.value) } : item,
+                                          ),
+                                        })
+                                      }
+                                      className={`w-full rounded-md border px-2 py-2 text-center font-black text-base ${
+                                        isFuerzaCiudadana
+                                          ? 'border-blue-400 bg-blue-100/50 text-blue-900 font-black'
+                                          : 'border-slate-200'
+                                      }`}
+                                    />
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setExtraction({
+                                          ...extraction,
+                                          resultados: extraction.resultados.filter((_, itemIndex) => itemIndex !== index),
+                                        })
+                                      }
+                                      className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                      aria-label={`Eliminar ${result.organizacion}`}
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                             {(Object.keys(SPECIAL_LABELS) as Array<keyof typeof SPECIAL_LABELS>).map((key) => (
                               <tr key={key} className="bg-slate-50/70">
-                                <td className="px-3 py-2 font-bold text-slate-700">{SPECIAL_LABELS[key]}</td>
-                                {(['provincial', 'distrital'] as const).map((column) => <td key={column} className="p-2"><input type="number" min="0" value={numberValue(extraction.especiales[key][column])} onChange={(event) => updatePair('especiales', key, column, event.target.value)} className="w-full rounded-md border border-slate-200 px-2 py-2 text-center font-black" /></td>)}
+                                <td className="px-2 py-2 text-center text-xs text-slate-400 font-bold">—</td>
+                                <td className="px-3 py-2 font-bold text-slate-700 text-xs sm:text-sm">
+                                  {SPECIAL_LABELS[key]}
+                                </td>
+                                {columnMode === 'completo' && (
+                                  <td className="p-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={numberValue(extraction.especiales[key].provincial)}
+                                      onChange={(event) => updatePair('especiales', key, 'provincial', event.target.value)}
+                                      className="w-full rounded-md border border-slate-200 px-2 py-2 text-center font-black text-base"
+                                    />
+                                  </td>
+                                )}
+                                <td className="p-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={numberValue(extraction.especiales[key].distrital)}
+                                    onChange={(event) => updatePair('especiales', key, 'distrital', event.target.value)}
+                                    className="w-full rounded-md border border-slate-200 px-2 py-2 text-center font-black text-base"
+                                  />
+                                </td>
                                 <td />
                               </tr>
                             ))}
-                            <tr className="bg-blue-50 text-blue-950">
-                              <td className="px-3 py-3 font-black">TOTAL DE VOTOS EMITIDOS</td>
-                              {(['provincial', 'distrital'] as const).map((column) => <td key={column} className="p-2"><input type="number" min="0" value={numberValue(extraction.totalesEmitidos[column])} onChange={(event) => updatePair('totalesEmitidos', null, column, event.target.value)} className="w-full rounded-md border border-blue-200 px-2 py-2 text-center text-lg font-black" /></td>)}
+                            <tr className="bg-blue-50 text-blue-950 font-black">
+                              <td className="px-2 py-3 text-center text-xs">—</td>
+                              <td className="px-3 py-3 text-xs sm:text-sm uppercase tracking-wide">
+                                TOTAL DE VOTOS EMITIDOS
+                              </td>
+                              {columnMode === 'completo' && (
+                                <td className="p-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={numberValue(extraction.totalesEmitidos.provincial)}
+                                    onChange={(event) => updatePair('totalesEmitidos', null, 'provincial', event.target.value)}
+                                    className="w-full rounded-md border border-blue-200 px-2 py-2 text-center text-base font-black"
+                                  />
+                                </td>
+                              )}
+                              <td className="p-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={numberValue(extraction.totalesEmitidos.distrital)}
+                                  onChange={(event) => updatePair('totalesEmitidos', null, 'distrital', event.target.value)}
+                                  className="w-full rounded-md border border-blue-300 bg-white px-2 py-2 text-center text-base sm:text-lg font-black text-blue-900"
+                                />
+                              </td>
                               <td />
                             </tr>
                           </tbody>

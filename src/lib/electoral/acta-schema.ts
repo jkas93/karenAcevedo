@@ -130,32 +130,47 @@ export function validateFinalActa(input: ExtraccionActa): {
   if (!normalizeMesaNumber(input.mesaNumero)) errors.push('El número de mesa debe tener entre 4 y 10 dígitos.');
   if (input.resultados.length === 0) errors.push('El acta debe contener al menos una organización política.');
 
+  const hasProvincial =
+    input.totalesEmitidos.provincial !== null ||
+    input.resultados.some((r) => r.provincial !== null) ||
+    Object.values(input.especiales).some((e) => e.provincial !== null);
+
   let totalProvincial = 0;
   let totalDistrital = 0;
   input.resultados.forEach((result, index) => {
     if (!result.organizacion.trim()) errors.push(`Falta el nombre de la organización ${index + 1}.`);
-    totalProvincial += requiredCount(result.provincial, `Voto provincial de ${result.organizacion || index + 1}`, errors);
+    if (hasProvincial) {
+      totalProvincial += requiredCount(result.provincial, `Voto provincial de ${result.organizacion || index + 1}`, errors);
+    }
     totalDistrital += requiredCount(result.distrital, `Voto distrital de ${result.organizacion || index + 1}`, errors);
   });
 
   for (const [label, values] of Object.entries(input.especiales)) {
-    totalProvincial += requiredCount(values.provincial, `${label} provinciales`, errors);
+    if (hasProvincial) {
+      totalProvincial += requiredCount(values.provincial, `${label} provinciales`, errors);
+    }
     totalDistrital += requiredCount(values.distrital, `${label} distritales`, errors);
   }
 
-  const declaredProvincial = requiredCount(input.totalesEmitidos.provincial, 'Total provincial', errors);
-  const declaredDistrital = requiredCount(input.totalesEmitidos.distrital, 'Total distrital', errors);
-  if (declaredProvincial !== totalProvincial) {
-    errors.push(`La suma provincial (${totalProvincial}) no coincide con el total declarado (${declaredProvincial}).`);
+  if (hasProvincial) {
+    const declaredProvincial = requiredCount(input.totalesEmitidos.provincial, 'Total provincial', errors);
+    if (declaredProvincial !== totalProvincial) {
+      errors.push(`La suma provincial (${totalProvincial}) no coincide con el total declarado (${declaredProvincial}).`);
+    }
   }
+
+  const declaredDistrital = requiredCount(input.totalesEmitidos.distrital, 'Total distrital', errors);
   if (declaredDistrital !== totalDistrital) {
     errors.push(`La suma distrital (${totalDistrital}) no coincide con el total declarado (${declaredDistrital}).`);
   }
 
   if (input.ciudadanosVotaron !== null) {
     const citizens = requiredCount(input.ciudadanosVotaron, 'Total de ciudadanos que votaron', errors);
-    if (declaredProvincial !== citizens || declaredDistrital !== citizens) {
-      errors.push('Los totales provincial y distrital deben coincidir con los ciudadanos que votaron.');
+    if (declaredDistrital !== citizens) {
+      errors.push('El total distrital debe coincidir con los ciudadanos que votaron.');
+    }
+    if (hasProvincial && totalProvincial !== citizens) {
+      errors.push('El total provincial debe coincidir con los ciudadanos que votaron.');
     }
   }
   if (
