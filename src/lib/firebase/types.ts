@@ -5,6 +5,7 @@ import type { Timestamp } from 'firebase/firestore';
 // ============================================================
 
 import type { UserRole } from '@/lib/access-control';
+import type { ConteoDoble, ResultadoOrganizacion } from '@/lib/electoral/acta-schema';
 
 export type RolUsuario = UserRole;
 
@@ -63,6 +64,20 @@ export type Acta = {
   votos_partido_d: number;
   votos_blancos: number;
   votos_nulos: number;
+  votos_impugnados?: number;
+  local_id?: string;
+  mesa_numero?: string;
+  resultados?: ResultadoOrganizacion[];
+  especiales?: {
+    blancos: ConteoDoble;
+    nulos: ConteoDoble;
+    impugnados: ConteoDoble;
+  };
+  totales_emitidos?: ConteoDoble;
+  electores_habiles?: number | null;
+  ciudadanos_votaron?: number | null;
+  observaciones?: string;
+  schema_version?: number;
   foto_url?: string;
   timestamp: Date;
 };
@@ -130,31 +145,87 @@ export type Partido = {
 
 export const PARTIDOS_CHACLACAYO: Partido[] = [
   {
-    id: 'partido_a',
+    id: 'fuerza_ciudadana',
     nombre: 'Fuerza Ciudadana',
     alias: 'Fuerza Ciudadana',
-    color: '#0070C0',   // Azul primario de la campaña
+    color: '#0070C0',   // Azul primario de la campaña Karen Acevedo
     esPropio: true,
   },
   {
-    id: 'partido_b',
-    nombre: 'Acción Popular',
-    alias: 'Acción Popular',
+    id: 'alianza_para_el_progreso',
+    nombre: 'Alianza para el Progreso',
+    alias: 'Alianza para el Progreso',
+    color: '#0284c7',   // Azul APP
+    esPropio: false,
+  },
+  {
+    id: 'peru_libre',
+    nombre: 'Partido Político Nacional Perú Libre',
+    alias: 'Perú Libre',
     color: '#dc2626',   // Rojo
     esPropio: false,
   },
   {
-    id: 'partido_c',
-    nombre: 'Renovación Popular',
-    alias: 'Renovación Popular',
-    color: '#7c3aed',   // Morado
+    id: 'juntos_por_el_peru',
+    nombre: 'Juntos por el Perú',
+    alias: 'Juntos por el Perú',
+    color: '#059669',   // Verde esmeralda
     esPropio: false,
   },
   {
-    id: 'partido_d',
-    nombre: 'Partido Rival 4',  // Actualizar cuando JNE confirme lista definitiva (agosto 2026)
-    alias: 'Rival 4',
-    color: '#94a3b8',   // Gris
+    id: 'accion_popular',
+    nombre: 'Acción Popular',
+    alias: 'Acción Popular',
+    color: '#e11d48',   // Rojo bandera AP
+    esPropio: false,
+  },
+  {
+    id: 'renovacion_popular',
+    nombre: 'Renovación Popular',
+    alias: 'Renovación Popular',
+    color: '#38bdf8',   // Celeste RP
+    esPropio: false,
+  },
+  {
+    id: 'fe_en_el_peru',
+    nombre: 'Fe en el Perú',
+    alias: 'Fe en el Perú',
+    color: '#d97706',   // Ámbar / Dorado
+    esPropio: false,
+  },
+  {
+    id: 'democrata_verde',
+    nombre: 'Partido Demócrata Verde',
+    alias: 'Demócrata Verde',
+    color: '#16a34a',   // Verde ecologista
+    esPropio: false,
+  },
+  {
+    id: 'avanza_pais',
+    nombre: 'Avanza País Partido de Integración Social',
+    alias: 'Avanza País',
+    color: '#1d4ed8',   // Azul royal
+    esPropio: false,
+  },
+  {
+    id: 'pais_para_todos',
+    nombre: 'Partido País para Todos',
+    alias: 'País para Todos',
+    color: '#ea580c',   // Naranja
+    esPropio: false,
+  },
+  {
+    id: 'somos_peru',
+    nombre: 'Somos Perú',
+    alias: 'Somos Perú',
+    color: '#4f46e5',   // Azul corazón / Índigo
+    esPropio: false,
+  },
+  {
+    id: 'podemos_peru',
+    nombre: 'Podemos Perú',
+    alias: 'Podemos Perú',
+    color: '#ca8a04',   // Dorado Podemos
     esPropio: false,
   },
 ];

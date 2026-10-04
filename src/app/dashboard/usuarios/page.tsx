@@ -34,6 +34,7 @@ const roleStyles: Record<UserRole, string> = {
   administrador: 'border-red-200 bg-red-50 text-red-700',
   candidata: 'border-purple-200 bg-purple-50 text-purple-700',
   digitador: 'border-blue-200 bg-blue-50 text-blue-700',
+  coordinador: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   usuario: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 

@@ -12,6 +12,22 @@ test('respeta permiso efectivo calendar.view configurado en servidor', () => {
   assert.equal(shouldNotifyRecipient({ ...profile, ...denied }, {}, intent, new Date()), false);
 });
 
+test('coordinador no recibe acceso ni avisos del calendario por defecto', () => {
+  const coordinator = effectiveCalendarPermissions('coordinador@example.com', 'coordinador', {});
+
+  assert.equal(coordinator.canViewCalendar, false);
+  assert.equal(coordinator.canManageCalendar, false);
+  assert.equal(
+    shouldNotifyRecipient(
+      { email: 'coordinador@example.com', ...coordinator },
+      {},
+      { ...intent, responsibleId: 'coordinador@example.com' },
+      new Date(),
+    ),
+    false,
+  );
+});
+
 test('recordatorios ordinarios solo llegan al responsable', () => {
   assert.equal(shouldNotifyRecipient(profile, {}, intent, new Date()), true);
   assert.equal(shouldNotifyRecipient({ ...profile, email: 'otro@example.com' }, {}, intent, new Date()), false);

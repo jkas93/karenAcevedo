@@ -94,7 +94,7 @@ export default function ConfiguracionPage() {
     if (!canManageElectoral) return;
     if (locales.length > 0) {
       const confirm = window.confirm(
-        "⚠️ ¡Atención! Al inicializar se borrarán todos los locales, mesas y asignaciones de personeros actuales para volver a cargarlos de cero. ¿Estás seguro de continuar?"
+        "⚠️ ¡Atención! Al inicializar se reemplazarán los locales, las actas y las mesas registradas. Las mesas quedarán vacías y se crearán al confirmar cada acta. ¿Deseas continuar?"
       );
       if (!confirm) return;
     }
@@ -105,11 +105,11 @@ export default function ConfiguracionPage() {
     try {
       await seedColegiosChaclacayo();
       setDbMessage({
-        text: "✅ Base electoral estándar de Chaclacayo cargada exitosamente.",
+        text: "✅ Se cargaron los 8 locales y su capacidad de 138 actas. No se precargaron números de mesa.",
         type: "success",
       });
     } catch (error: unknown) {
-      setDbMessage({ text: "❌ Error al cargar colegios y mesas: " + getErrorMessage(error), type: "error" });
+      setDbMessage({ text: "❌ Error al cargar la estructura electoral: " + getErrorMessage(error), type: "error" });
     } finally {
       setLoadingDbAction(false);
     }
@@ -268,7 +268,7 @@ export default function ConfiguracionPage() {
     if (parsedData.length === 0) return;
 
     const confirm = window.confirm(
-      `⚠️ ¿Confirmas importar ${previewSummary.mesas} mesas agrupadas en ${previewSummary.locales} locales? Esto reemplazará toda la estructura de locales y mesas actual.`
+      `⚠️ ¿Confirmas una capacidad de ${previewSummary.mesas} actas agrupadas en ${previewSummary.locales} locales? Esto reemplazará la estructura electoral actual y dejará las mesas vacías hasta que se confirme cada acta.`
     );
     if (!confirm) return;
 
@@ -279,7 +279,7 @@ export default function ConfiguracionPage() {
     try {
       await importarBaseElectoralPersonalizada(parsedData);
       setDbMessage({
-        text: `✅ Importación completada: se registraron ${previewSummary.locales} locales y ${previewSummary.mesas} mesas exitosamente.`,
+        text: `✅ Importación completada: ${previewSummary.locales} locales con capacidad para ${previewSummary.mesas} actas. Los números de mesa se crearán desde las actas.`,
         type: "success",
       });
       // Limpiar estados
@@ -391,7 +391,7 @@ export default function ConfiguracionPage() {
           <div>
             <h2 className="text-xl font-bold text-dark mb-2">Base de Datos Electoral</h2>
             <p className="text-text mb-6 text-sm">
-              Carga, limpia o importa la lista de colegios y mesas de votación para el Día de la elección.
+              Configura los colegios y su cantidad esperada de actas. Los números de mesa no se precargan.
             </p>
 
             <div className="space-y-5">
@@ -428,7 +428,7 @@ export default function ConfiguracionPage() {
                     <p className="text-2xl font-black text-slate-800">{locales.length}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mesas</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Actas recibidas</p>
                     <p className="text-2xl font-black text-slate-800">{mesas.length}</p>
                   </div>
                 </div>
@@ -489,8 +489,8 @@ export default function ConfiguracionPage() {
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b">
               <div>
-                <h3 id="import-title" className="font-black text-xl text-dark">Carga Masiva de Locales y Mesas</h3>
-                <p className="text-xs text-slate-500 mt-1">Crea tu estructura electoral arrastrando tu Excel o copiando celdas directamente.</p>
+                <h3 id="import-title" className="font-black text-xl text-dark">Carga Masiva de Locales y Capacidad</h3>
+                <p className="text-xs text-slate-500 mt-1">Usa el Excel para calcular cuántas actas corresponden a cada colegio; los números de mesa no se guardarán.</p>
               </div>
               <button
                 type="button"
@@ -657,8 +657,8 @@ export default function ConfiguracionPage() {
         <div>
           <p className="font-bold mb-1">💡 Notas sobre Operación Electoral</p>
           <ul className="list-disc pl-4 space-y-1 text-xs">
-            <li>La carga estándar creará los 8 locales confirmados de Chaclacayo y sus 138 mesas correlativas.</li>
-            <li>Si realizas un cambio de locales o mesas, la base de datos se actualizará y los Digitadores verán las nuevas mesas disponibles inmediatamente en el módulo de Ingreso de Actas.</li>
+            <li>La carga estándar crea los 8 locales confirmados de Chaclacayo con una capacidad total de 138 actas.</li>
+            <li>La colección de mesas empieza vacía: cada número se incorpora únicamente cuando un operador revisa y confirma su acta.</li>
             <li>Los datos de los voluntarios no se verán alterados por estas operaciones de base de datos.</li>
           </ul>
         </div>

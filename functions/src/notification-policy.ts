@@ -12,7 +12,7 @@ export const REMINDER_MINUTES = [1440, 60, 15] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 export type ReminderMinute = (typeof REMINDER_MINUTES)[number];
-export type UserRole = 'superusuario' | 'administrador' | 'candidata' | 'digitador' | 'usuario';
+export type UserRole = 'superusuario' | 'administrador' | 'candidata' | 'digitador' | 'coordinador' | 'usuario';
 export type NotificationKind = 'change' | 'reminder' | 'status_request';
 export type NotificationAudience = 'relevant_change' | 'responsible' | 'calendar_managers';
 
@@ -65,6 +65,7 @@ const DEFAULT_CALENDAR_PERMISSIONS: Record<UserRole, { view: boolean; manage: bo
   administrador: { view: true, manage: true },
   candidata: { view: true, manage: true },
   digitador: { view: true, manage: false },
+  coordinador: { view: false, manage: false },
   usuario: { view: true, manage: false },
 };
 
@@ -74,7 +75,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isRole(value: unknown): value is UserRole {
   return typeof value === 'string'
-    && ['superusuario', 'administrador', 'candidata', 'digitador', 'usuario'].includes(value);
+    && ['superusuario', 'administrador', 'candidata', 'digitador', 'coordinador', 'usuario'].includes(value);
 }
 
 function normalizeTime(value: unknown, fallback: string) {

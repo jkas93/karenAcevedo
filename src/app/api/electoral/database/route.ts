@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 const MAX_ROWS = 5000;
 const MAX_BODY_BYTES = 3 * 1024 * 1024;
 const BATCH_SIZE = 400;
-const COLLECTIONS = ['actas', 'mesas', 'locales'] as const;
+const COLLECTIONS = ['actas', 'mesas', 'locales', 'actaDrafts', 'electoralCounters'] as const;
 
 type ImportRow = {
   mesa: string;
@@ -108,13 +108,9 @@ function buildDocuments(db: Firestore, rows: ImportRow[]) {
         total_mesas: mesas.length,
       },
     });
-    for (const numero of mesas) {
-      writes.push({
-        path: db.collection('mesas').doc().path,
-        data: { numero, local_id: localRef.id, personero_uid: null, estado: 'pendiente' },
-      });
-    }
   }
+  // Los números del archivo solo determinan la capacidad esperada de cada local.
+  // No se precargan mesas: cada documento se crea al confirmar su acta.
   return { writes, locales: grouped.size, mesas: rows.length };
 }
 

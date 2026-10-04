@@ -11,9 +11,7 @@ import {
   CheckCircle2,
   Eye,
   FileText,
-  Filter,
   Loader2,
-  Lock,
   Maximize,
   Minimize,
   MapPin,
@@ -36,9 +34,12 @@ import {
 } from 'recharts';
 import { useElectoral } from '@/lib/firebase/ElectoralContext';
 import { PARTIDOS_CHACLACAYO } from '@/lib/firebase/types';
+import { defaultElectoralTab } from '@/lib/access-control';
 import { useAccess } from '@/components/access/AccessContext';
 import { PersonerosPanel } from '@/components/electoral/PersonerosPanel';
 import { ColegiosDetallePanel } from '@/components/electoral/ColegiosDetallePanel';
+import { ACTAS_ESPERADAS } from '@/lib/electoral/acta-schema';
+import type { Acta } from '@/lib/firebase/types';
 
 // Importar el mapa dinámicamente para evitar errores de SSR con Leaflet
 const MapChaclacayo = dynamic(
@@ -55,45 +56,100 @@ const MapChaclacayo = dynamic(
 
 type TabType = 'resumen' | 'colegios' | 'personeros' | 'actas';
 
+const RESULT_COLORS = ['#0070C0', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#be123c', '#4f46e5'];
+
+function normalizedOrganization(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function districtVotesForParty(acta: Acta, partyIndex: number) {
+  const party = PARTIDOS_CHACLACAYO[partyIndex];
+  const targetNames = party ? [party.nombre, party.alias].map(normalizedOrganization) : [];
+  const recognized = acta.resultados?.find((result) => {
+    const name = normalizedOrganization(result.organizacion);
+    return targetNames.some((target) => name === target || name.includes(target) || target.includes(name));
+  });
+  if (recognized) return recognized.distrital ?? 0;
+  return [acta.votos_partido_a, acta.votos_partido_b, acta.votos_partido_c, acta.votos_partido_d][partyIndex] || 0;
+}
+
 export default function ControlElectoralDashboard() {
-  const [activeTab, setActiveTab] = useState<TabType>('resumen');
+  const { role, hasPermission } = useAccess();
+  const [activeTab, setActiveTab] = useState<TabType>(() => defaultElectoralTab(role));
   const [modoTV, setModoTV] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [actasSearch, setActasSearch] = useState('');
   const [actasFotoFilter, setActasFotoFilter] = useState<'todas' | 'con_foto' | 'sin_foto'>('todas');
-  const { hasPermission } = useAccess();
-
   // Datos centralizados desde el ElectoralProvider
   const { locales, mesas, actas, personeros, loading } = useElectoral();
 
   // ─── Cálculos estadísticos ─────────────────────────────────────────────────
 
   const stats = useMemo(() => {
-    const totalMesas = mesas.length > 0 ? mesas.length : 138;
-    const mesasEscrutadas = mesas.filter((m) => m.estado === 'enviada').length;
+    const totalMesas = ACTAS_ESPERADAS;
+    const mesasEscrutadas = new Set(actas.map((acta) => acta.mesa_numero || acta.mesa_id)).size;
     const porcentajeEscrutado =
       totalMesas > 0
         ? ((mesasEscrutadas / totalMesas) * 100).toFixed(1)
         : '0.0';
 
-    // Votos por partido
-    const votosA = actas.reduce((acc, curr) => acc + (curr.votos_partido_a || 0), 0);
-    const votosB = actas.reduce((acc, curr) => acc + (curr.votos_partido_b || 0), 0);
-    const votosC = actas.reduce((acc, curr) => acc + (curr.votos_partido_c || 0), 0);
-    const votosD = actas.reduce((acc, curr) => acc + (curr.votos_partido_d || 0), 0);
+    const groupedOrganizations = new Map<string, { name: string; votes: number }>();
+    actas.forEach((acta) => {
+      if (acta.resultados?.length) {
+        acta.resultados.forEach((result) => {
+          const key = normalizedOrganization(result.organizacion);
+          if (!key) return;
+          const current = groupedOrganizations.get(key);
+          groupedOrganizations.set(key, {
+            name: current?.name || result.organizacion,
+            votes: (current?.votes || 0) + (result.distrital || 0),
+          });
+        });
+        return;
+      }
+      PARTIDOS_CHACLACAYO.forEach((party, index) => {
+        const key = normalizedOrganization(party.nombre);
+        const current = groupedOrganizations.get(key);
+        groupedOrganizations.set(key, {
+          name: party.alias,
+          votes: (current?.votes || 0) + districtVotesForParty(acta, index),
+        });
+      });
+    });
+    const organizationTotals = [...groupedOrganizations.entries()].map(([key, result], index) => {
+      const known = PARTIDOS_CHACLACAYO.find((party) => {
+        const partyName = normalizedOrganization(party.nombre);
+        const partyAlias = normalizedOrganization(party.alias);
+        return key === partyName || key === partyAlias || key.includes(partyName) || partyName.includes(key);
+      });
+      return { name: result.name, Votos: result.votes, color: known?.color || RESULT_COLORS[index % RESULT_COLORS.length] };
+    });
+    const votosA = actas.reduce((acc, curr) => acc + districtVotesForParty(curr, 0), 0);
+    const rivalTotals = organizationTotals
+      .filter((org) => {
+        const propio = PARTIDOS_CHACLACAYO.find((p) => p.esPropio);
+        return org.name !== propio?.alias && org.name !== propio?.nombre;
+      })
+      .sort((a, b) => b.Votos - a.Votos);
+    const rivalLider = rivalTotals[0] || { name: 'Segundo lugar', Votos: 0, color: '#dc2626' };
+    const votosB = rivalLider.Votos;
+    const rivalBName = rivalLider.name;
     const votosBlancosNulos = actas.reduce(
-      (acc, curr) => acc + (curr.votos_blancos || 0) + (curr.votos_nulos || 0),
+      (acc, curr) => acc + (curr.votos_blancos || 0) + (curr.votos_nulos || 0) + (curr.votos_impugnados || 0),
       0
     );
-    const totalVotos = votosA + votosB + votosC + votosD + votosBlancosNulos;
+    const totalVotos = organizationTotals.reduce((sum, result) => sum + result.Votos, 0) + votosBlancosNulos;
 
     const pct = (v: number) =>
       totalVotos > 0 ? ((v / totalVotos) * 100).toFixed(1) : '0.0';
 
     const colegiosCompletados = locales.filter((l) => {
-      const mesasDelLocal = mesas.filter((m) => m.local_id === l.id);
-      const enviadas = mesasDelLocal.filter((m) => m.estado === 'enviada').length;
-      return mesasDelLocal.length > 0 && enviadas === mesasDelLocal.length;
+      const recibidas = actas.filter((acta) => {
+        if (acta.local_id) return acta.local_id === l.id;
+        const mesa = mesas.find((item) => item.id === acta.mesa_id || item.numero === acta.mesa_id);
+        return mesa?.local_id === l.id;
+      }).length;
+      return l.total_mesas > 0 && recibidas === l.total_mesas;
     }).length;
 
     // Última acta recibida (más reciente)
@@ -110,9 +166,9 @@ export default function ControlElectoralDashboard() {
       porcentajeEscrutado,
       votosA,
       votosB,
-      votosC,
-      votosD,
+      rivalBName,
       votosBlancosNulos,
+      organizationTotals,
       totalVotos,
       pct,
       colegiosCompletados,
@@ -123,22 +179,20 @@ export default function ControlElectoralDashboard() {
 
   // ─── Datos del gráfico ─────────────────────────────────────────────────────
 
-  const chartData = PARTIDOS_CHACLACAYO.map((p, i) => {
-    const votosClave = (['votosA', 'votosB', 'votosC', 'votosD'] as const)[i];
-    return {
-      name: p.alias,
-      Votos: stats[votosClave] || 0,
-      color: p.color,
-      pct: stats.pct(stats[votosClave] || 0),
-    };
-  }).concat([
-    {
-      name: 'Blancos/Nulos',
-      Votos: stats.votosBlancosNulos,
-      color: '#94a3b8',
-      pct: stats.pct(stats.votosBlancosNulos),
-    },
-  ]);
+  const chartData = stats.organizationTotals
+    .slice()
+    .sort((a, b) => b.Votos - a.Votos)
+    .map((result) => ({
+      ...result,
+      pct: stats.pct(result.Votos),
+    })).concat([
+      {
+        name: 'Blancos/Nulos',
+        Votos: stats.votosBlancosNulos,
+        color: '#94a3b8',
+        pct: stats.pct(stats.votosBlancosNulos),
+      },
+    ]);
 
   // ─── Alertas dinámicas ─────────────────────────────────────────────────────
 
@@ -151,11 +205,13 @@ export default function ControlElectoralDashboard() {
     }> = [];
 
     locales.forEach((local) => {
-      const mesasLocal = mesas.filter((m) => m.local_id === local.id);
-      if (mesasLocal.length === 0) return;
-
-      const enviadas = mesasLocal.filter((m) => m.estado === 'enviada').length;
-      const total = mesasLocal.length;
+      const enviadas = actas.filter((acta) => {
+        if (acta.local_id) return acta.local_id === local.id;
+        const mesa = mesas.find((item) => item.id === acta.mesa_id || item.numero === acta.mesa_id);
+        return mesa?.local_id === local.id;
+      }).length;
+      const total = local.total_mesas;
+      if (total <= 0) return;
       const pct = Math.round((enviadas / total) * 100);
 
       if (pct === 100) {
@@ -176,7 +232,7 @@ export default function ControlElectoralDashboard() {
     });
 
     return result.slice(0, 6);
-  }, [locales, mesas]);
+  }, [locales, mesas, actas]);
 
   // ─── Filtrado de actas en Tab 4 ──────────────────────────────────────────
 
@@ -185,7 +241,7 @@ export default function ControlElectoralDashboard() {
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .filter((acta) => {
         const mesa = mesas.find((m) => m.id === acta.mesa_id || m.numero === acta.mesa_id);
-        const local = locales.find((l) => l.id === mesa?.local_id);
+        const local = locales.find((l) => l.id === (acta.local_id || mesa?.local_id));
 
         if (actasFotoFilter === 'con_foto' && !acta.foto_url) return false;
         if (actasFotoFilter === 'sin_foto' && acta.foto_url) return false;
@@ -381,13 +437,13 @@ export default function ControlElectoralDashboard() {
               </CardContent>
             </Card>
 
-            {/* Rival directo */}
+            {/* Rival directo / Segundo lugar general */}
             <Card className="shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-red-700">
-                  {PARTIDOS_CHACLACAYO[1]?.alias ?? 'Rival 1'}
+                <CardTitle className="text-sm font-medium text-slate-700 truncate max-w-[200px]">
+                  {stats.rivalBName} (2.° Lugar)
                 </CardTitle>
-                <Users className="h-4 w-4 text-red-600" />
+                <Users className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-slate-700">
@@ -640,7 +696,7 @@ export default function ControlElectoralDashboard() {
                   {/* Selector de filtro de foto */}
                   <select
                     value={actasFotoFilter}
-                    onChange={(e) => setActasFotoFilter(e.target.value as any)}
+                    onChange={(e) => setActasFotoFilter(e.target.value as 'todas' | 'con_foto' | 'sin_foto')}
                     aria-label="Filtrar actas por evidencia fotográfica"
                     className="py-1.5 px-2.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
                   >
@@ -659,8 +715,8 @@ export default function ControlElectoralDashboard() {
                       <th className="px-3.5 py-2.5">Hora</th>
                       <th className="px-3.5 py-2.5">Mesa</th>
                       <th className="px-3.5 py-2.5">Centro de Votación</th>
-                      <th className="px-3.5 py-2.5 text-center">Votos {partidoPropio?.alias ?? 'Partido'}</th>
-                      <th className="px-3.5 py-2.5 text-center">Rival 1</th>
+                      <th className="px-3.5 py-2.5 text-center">Fuerza Ciudadana</th>
+                      <th className="px-3.5 py-2.5 text-center">Segundo Lugar</th>
                       <th className="px-3.5 py-2.5 text-center">Blancos / Nulos</th>
                       <th className="px-3.5 py-2.5 text-center">Total Mesa</th>
                       <th className="px-3.5 py-2.5 text-center">Evidencia</th>
@@ -678,14 +734,21 @@ export default function ControlElectoralDashboard() {
                     ) : (
                       filteredActas.map((acta) => {
                         const mesa = mesas.find((m) => m.id === acta.mesa_id || m.numero === acta.mesa_id);
-                        const local = locales.find((l) => l.id === mesa?.local_id);
-                        const totalMesa =
+                        const local = locales.find((l) => l.id === (acta.local_id || mesa?.local_id));
+                        const votosPropio = districtVotesForParty(acta, 0);
+                        const rivalesMesa = PARTIDOS_CHACLACAYO.slice(1).map((p, idx) => ({
+                          name: p.alias,
+                          votos: districtVotesForParty(acta, idx + 1),
+                        })).sort((a, b) => b.votos - a.votos);
+                        const segundoMesa = rivalesMesa[0] || { name: 'Segundo', votos: 0 };
+                        const totalMesa = acta.totales_emitidos?.distrital ??
                           (acta.votos_partido_a || 0) +
                           (acta.votos_partido_b || 0) +
                           (acta.votos_partido_c || 0) +
                           (acta.votos_partido_d || 0) +
                           (acta.votos_blancos || 0) +
-                          (acta.votos_nulos || 0);
+                          (acta.votos_nulos || 0) +
+                          (acta.votos_impugnados || 0);
 
                         return (
                           <tr key={acta.id} className="hover:bg-slate-50/70 transition-colors">
@@ -704,11 +767,11 @@ export default function ControlElectoralDashboard() {
                             </td>
                             <td className="px-3.5 py-2.5 text-center">
                               <span className="inline-block bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded border border-blue-200">
-                                {acta.votos_partido_a}
+                                {votosPropio}
                               </span>
                             </td>
                             <td className="px-3.5 py-2.5 text-center font-medium text-slate-700">
-                              {acta.votos_partido_b || 0}
+                              <span>{segundoMesa.votos} <span className="text-[10px] text-slate-400">({segundoMesa.name})</span></span>
                             </td>
                             <td className="px-3.5 py-2.5 text-center text-slate-500">
                               {(acta.votos_blancos || 0) + (acta.votos_nulos || 0)}

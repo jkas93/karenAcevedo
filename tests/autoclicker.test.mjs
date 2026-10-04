@@ -5,7 +5,7 @@ import { canonical, codeHash, leaseDuration, pairingCode, parseKey, searchPrefix
 import { normalizePermissions, permissionForDashboardPath } from '../src/lib/access-control.ts';
 
 test('los roles existentes no adquieren permisos de dispositivos por defecto', () => {
-  for (const role of ['administrador', 'candidata', 'digitador', 'usuario']) {
+  for (const role of ['administrador', 'candidata', 'digitador', 'coordinador', 'usuario']) {
     const p = normalizePermissions(role, {});
     for (const key of ['view', 'manage', 'authorize', 'audit']) assert.equal(p[`devices.${key}`], false);
   }

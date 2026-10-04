@@ -28,3 +28,20 @@ export async function authenticatedPost<TResponse>(
 
   return payload;
 }
+
+export async function authenticatedFormPost<TResponse>(
+  url: string,
+  body: FormData,
+): Promise<TResponse> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('Debes iniciar sesion nuevamente.');
+  const idToken = await currentUser.getIdToken();
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${idToken}` },
+    body,
+  });
+  const payload = (await response.json().catch(() => ({}))) as TResponse & ApiErrorPayload;
+  if (!response.ok) throw new Error(payload.error || 'No se pudo completar la operacion.');
+  return payload;
+}

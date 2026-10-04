@@ -6,6 +6,7 @@ export const USER_ROLES = [
   'administrador',
   'candidata',
   'digitador',
+  'coordinador',
   'usuario',
 ] as const;
 
@@ -13,6 +14,7 @@ export const ASSIGNABLE_ROLES = [
   'administrador',
   'candidata',
   'digitador',
+  'coordinador',
   'usuario',
 ] as const;
 
@@ -71,6 +73,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     'electoral.view', 'electoral.manage',
   ),
   digitador: withPermissions('electoral.view', 'calendar.view', 'actas.view', 'actas.manage'),
+  coordinador: withPermissions('electoral.view', 'electoral.manage'),
   usuario: withPermissions('electoral.view', 'calendar.view', 'volunteers.view', 'volunteers.manage'),
 };
 
@@ -79,6 +82,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   administrador: 'Administrador',
   candidata: 'Candidata',
   digitador: 'Digitador',
+  coordinador: 'Coordinador',
   usuario: 'Usuario',
 };
 
@@ -146,4 +150,14 @@ export function permissionForDashboardPath(pathname: string): PermissionKey {
   if (pathname.startsWith('/dashboard/usuarios')) return 'users.view';
   if (pathname === '/dashboard') return 'electoral.view';
   return 'electoral.view';
+}
+
+/**
+ * Devuelve la pestaña de Control Electoral que debe mostrarse por defecto
+ * según el rol del usuario autenticado.
+ * - 'coordinador': abre directamente la pestaña "Centros de Votación".
+ * - Todos los demás roles: abre la "Sala de Guerra" (resumen).
+ */
+export function defaultElectoralTab(role: UserRole): 'resumen' | 'colegios' | 'personeros' | 'actas' {
+  return role === 'coordinador' ? 'colegios' : 'resumen';
 }

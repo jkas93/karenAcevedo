@@ -3,6 +3,7 @@ import 'server-only';
 import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 function requireServerEnv(name: string): string {
   const value = process.env[name];
@@ -24,7 +25,9 @@ export function getAdminServices() {
       });
 
   return {
+    adminApp,
     adminAuth: getAuth(adminApp),
     adminDb: getFirestore(adminApp),
+    adminStorage: getStorage(adminApp),
   };
 }

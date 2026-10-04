@@ -96,6 +96,8 @@ export function ColegiosDetallePanel({
 
       // Actas procesadas de este colegio
       const actasColegio = actas.filter((a) =>
+        a.local_id === firestoreLocal?.id ||
+        a.local_id === docId ||
         mesasColegio.some((m) => m.id === a.mesa_id || m.numero === a.mesa_id),
       );
 
@@ -193,11 +195,11 @@ export function ColegiosDetallePanel({
       } else {
         throw new Error('No se pudo confirmar la actualización en el servidor.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al actualizar coordinador:', err);
       setFeedback({
         type: 'error',
-        text: err?.message || 'Error al guardar el coordinador en el servidor.',
+        text: err instanceof Error ? err.message : 'Error al guardar el coordinador en el servidor.',
         localId: col.id,
       });
     } finally {

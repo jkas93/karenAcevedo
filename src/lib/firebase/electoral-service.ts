@@ -1,16 +1,12 @@
 import {
   collection,
-  doc,
   getDocs,
   onSnapshot,
   query,
-  serverTimestamp,
   Timestamp,
   where,
-  writeBatch,
 } from 'firebase/firestore';
-import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
-import { app, auth, db } from '../firebase';
+import { db } from '../firebase';
 import type { Acta, LocalVotacion, Mesa, Personero, Usuario } from './types';
 
 export type { LocalVotacion, Mesa, Acta, Personero } from './types';
@@ -179,60 +175,6 @@ export const electoralService = {
           });
       },
     );
-  },
-
-  guardarActa: async (acta: Omit<Acta, 'id' | 'timestamp'>) => {
-    const conteos = [
-      acta.votos_partido_a,
-      acta.votos_partido_b,
-      acta.votos_partido_c,
-      acta.votos_partido_d,
-      acta.votos_blancos,
-      acta.votos_nulos,
-    ];
-    if (conteos.some((valor) => !Number.isInteger(valor) || valor < 0 || valor > 2000)) {
-      throw new Error('Cada conteo debe ser un entero entre 0 y 2000.');
-    }
-    const total = conteos.reduce((suma, valor) => suma + valor, 0);
-    if (total < 1 || total > 2000) {
-      throw new Error('El total del acta debe estar entre 1 y 2000 votos.');
-    }
-
-    const batch = writeBatch(db);
-    const actaRef = doc(db, 'actas', acta.mesa_id);
-    const mesaRef = doc(db, 'mesas', acta.mesa_id);
-
-    batch.set(actaRef, {
-      ...acta,
-      timestamp: serverTimestamp(),
-    });
-    batch.update(mesaRef, { estado: 'enviada' });
-    await batch.commit();
-  },
-
-  subirFotoActa: async (archivo: File, mesaId: string): Promise<string> => {
-    if (!archivo.type.startsWith('image/')) {
-      throw new Error('El archivo del acta debe ser una imagen.');
-    }
-    if (archivo.size > 10 * 1024 * 1024) {
-      throw new Error('La imagen del acta no debe superar los 10 MB.');
-    }
-
-    const currentUser = auth.currentUser;
-    if (!currentUser) throw new Error('Debes iniciar sesión nuevamente.');
-    const storage = getStorage(app);
-    const nombreArchivo = `actas/${mesaId}_${Date.now()}.webp`;
-    const storageRef = ref(storage, nombreArchivo);
-    await uploadBytes(storageRef, archivo, {
-      contentType: 'image/webp',
-      customMetadata: { ownerUid: currentUser.uid },
-    });
-    return getDownloadURL(storageRef);
-  },
-
-  eliminarFotoActa: async (url: string) => {
-    const storage = getStorage(app);
-    await deleteObject(ref(storage, url));
   },
 
   getDigitadores: (

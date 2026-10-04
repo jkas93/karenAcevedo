@@ -41,6 +41,9 @@ service cloud.firestore {
         || role() == 'digitador' && permission in [
           'calendar.view', 'actas.view', 'actas.manage'
         ]
+        || role() == 'coordinador' && permission in [
+          'electoral.view', 'electoral.manage'
+        ]
         || role() == 'usuario' && permission in [
           'calendar.view', 'volunteers.view', 'volunteers.manage'
         ];
@@ -96,48 +99,6 @@ service cloud.firestore {
         && data.updatedAt is timestamp
         && exists(/databases/$(database)/documents/usuarios/$(data.responsableId));
     }
-    function validActa(docId) {
-      let data = request.resource.data;
-      return data.keys().hasAll([
-          'mesa_id',
-          'votos_partido_a',
-          'votos_partido_b',
-          'votos_partido_c',
-          'votos_partido_d',
-          'votos_blancos',
-          'votos_nulos',
-          'timestamp'
-        ])
-        && data.keys().hasOnly([
-          'mesa_id',
-          'votos_partido_a',
-          'votos_partido_b',
-          'votos_partido_c',
-          'votos_partido_d',
-          'votos_blancos',
-          'votos_nulos',
-          'foto_url',
-          'timestamp'
-        ])
-        && data.mesa_id == docId
-        && data.mesa_id is string
-        && data.votos_partido_a is int && data.votos_partido_a >= 0 && data.votos_partido_a <= 2000
-        && data.votos_partido_b is int && data.votos_partido_b >= 0 && data.votos_partido_b <= 2000
-        && data.votos_partido_c is int && data.votos_partido_c >= 0 && data.votos_partido_c <= 2000
-        && data.votos_partido_d is int && data.votos_partido_d >= 0 && data.votos_partido_d <= 2000
-        && data.votos_blancos is int && data.votos_blancos >= 0 && data.votos_blancos <= 2000
-        && data.votos_nulos is int && data.votos_nulos >= 0 && data.votos_nulos <= 2000
-        && data.votos_partido_a + data.votos_partido_b + data.votos_partido_c
-          + data.votos_partido_d + data.votos_blancos + data.votos_nulos >= 1
-        && data.votos_partido_a + data.votos_partido_b + data.votos_partido_c
-          + data.votos_partido_d + data.votos_blancos + data.votos_nulos <= 2000
-        && (!('foto_url' in data) || (data.foto_url is string
-          && data.foto_url.size() <= 2000
-          && data.foto_url.matches('https://firebasestorage\\.googleapis\\.com/.*')))
-        && data.timestamp == request.time
-        && exists(/databases/$(database)/documents/mesas/$(docId));
-    }
-
     match /voluntarios/{docId} {
       allow create: if false;
       allow read: if hasPermission('volunteers.view');
@@ -165,20 +126,22 @@ service cloud.firestore {
     match /mesas/{docId} {
       allow read: if hasPermission('electoral.view') || hasPermission('actas.view')
         || hasPermission('settings.view');
-      allow create, delete: if false;
-      allow update: if (hasPermission('electoral.manage') || hasPermission('actas.manage'))
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
-        && resource.data.estado == 'pendiente'
-        && request.resource.data.estado == 'enviada';
+      // Cada mesa nace junto con el acta validada mediante la API administrativa.
+      allow create, update, delete: if false;
     }
 
     match /actas/{docId} {
       allow read: if hasPermission('electoral.view') || hasPermission('actas.view');
-      allow create: if hasPermission('actas.manage')
-        && !exists(/databases/$(database)/documents/actas/$(docId))
-        && validActa(docId);
-      allow update: if false;
-      allow delete: if hasPermission('electoral.manage');
+      // Conversión WebP, OCR, validación y persistencia son atómicas y server-only.
+      allow create, update, delete: if false;
+    }
+
+    match /actaDrafts/{docId} {
+      allow read, write: if false;
+    }
+
+    match /electoralCounters/{docId} {
+      allow read, write: if false;
     }
 
     match /personeros/{docId} {

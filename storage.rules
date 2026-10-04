@@ -26,7 +26,8 @@ service firebase.storage {
       return role() == 'administrador'
         && permission in ['electoral.view', 'electoral.manage', 'actas.view', 'actas.manage']
         || role() == 'candidata' && permission == 'electoral.view'
-        || role() == 'digitador' && permission in ['actas.view', 'actas.manage'];
+        || role() == 'digitador' && permission in ['actas.view', 'actas.manage']
+        || role() == 'coordinador' && permission in ['electoral.view', 'electoral.manage'];
     }
 
     function hasPermission(permission) {
@@ -39,15 +40,8 @@ service firebase.storage {
 
     match /actas/{fileName} {
       allow read: if hasPermission('electoral.view') || hasPermission('actas.view');
-      allow create: if hasPermission('actas.manage')
-        && resource == null
-        && fileName.matches('.*\\.webp')
-        && request.resource.size < 10 * 1024 * 1024
-        && request.resource.contentType == 'image/webp';
-      allow update: if false;
-      allow delete: if hasPermission('electoral.manage')
-        || (hasPermission('actas.manage')
-          && resource.metadata.ownerUid == request.auth.uid);
+      // Las imágenes se convierten y guardan como WebP únicamente en el servidor.
+      allow create, update, delete: if false;
     }
 
     match /{allPaths=**} {
