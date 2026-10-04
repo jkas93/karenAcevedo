@@ -109,6 +109,20 @@ export default function DigitacionCentralPage() {
     });
   };
 
+  const handleDeleteExistingMesa = async () => {
+    if (!extraction?.mesaNumero) return;
+    if (!window.confirm(`¿Confirmas eliminar permanentemente el acta de la mesa ${extraction.mesaNumero}? Esta acción descontará sus votos y quedará registrada en auditoría con tu correo.`)) {
+      return;
+    }
+    try {
+      await authenticatedPost('/api/electoral/actas/delete', { mesaId: extraction.mesaNumero });
+      setRectificar(false);
+      alert(`Acta de la mesa ${extraction.mesaNumero} eliminada correctamente. La mesa vuelve a estar disponible.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar el acta');
+    }
+  };
+
   const reset = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setImageFile(null);
@@ -375,15 +389,24 @@ export default function DigitacionCentralPage() {
                             Para rectificarla, activa la opción de rectificación a continuación:
                           </p>
                           {isAdminOrSuper ? (
-                            <label className="mt-2.5 inline-flex items-center gap-2 cursor-pointer font-bold text-xs bg-amber-100/90 px-3 py-2 rounded-lg border border-amber-300">
-                              <input
-                                type="checkbox"
-                                checked={rectificar}
-                                onChange={(e) => setRectificar(e.target.checked)}
-                                className="h-4 w-4 rounded text-primary focus:ring-primary"
-                              />
-                              <span>Autorizar rectificación de esta acta (Auditable)</span>
-                            </label>
+                            <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+                              <label className="inline-flex items-center gap-2 cursor-pointer font-bold text-xs bg-amber-100/90 px-3 py-2 rounded-lg border border-amber-300">
+                                <input
+                                  type="checkbox"
+                                  checked={rectificar}
+                                  onChange={(e) => setRectificar(e.target.checked)}
+                                  className="h-4 w-4 rounded text-primary focus:ring-primary"
+                                />
+                                <span>Autorizar rectificación de esta acta (Auditable)</span>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleDeleteExistingMesa}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-100/90 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-200 transition"
+                              >
+                                <Trash2 size={14} /> Eliminar acta existente (Modo Dios)
+                              </button>
+                            </div>
                           ) : (
                             <p className="text-xs text-amber-700 font-semibold mt-1">
                               (Solo usuarios con rol Administrador o Modo Dios pueden rectificar actas).

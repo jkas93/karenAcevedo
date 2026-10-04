@@ -21,6 +21,7 @@ import {
   Users,
   Wifi,
   X,
+  Trash2,
 } from 'lucide-react';
 import {
   BarChart,
@@ -39,6 +40,7 @@ import { useAccess } from '@/components/access/AccessContext';
 import { PersonerosPanel } from '@/components/electoral/PersonerosPanel';
 import { ColegiosDetallePanel } from '@/components/electoral/ColegiosDetallePanel';
 import { ACTAS_ESPERADAS } from '@/lib/electoral/acta-schema';
+import { authenticatedPost } from '@/lib/firebase/authenticated-request';
 import type { Acta } from '@/lib/firebase/types';
 
 // Importar el mapa dinámicamente para evitar errores de SSR con Leaflet
@@ -80,6 +82,23 @@ export default function ControlElectoralDashboard() {
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [actasSearch, setActasSearch] = useState('');
   const [actasFotoFilter, setActasFotoFilter] = useState<'todas' | 'con_foto' | 'sin_foto'>('todas');
+  const isSuperOrAdmin = role === 'superusuario' || role === 'administrador';
+  const [deletingMesaId, setDeletingMesaId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteActa = async (mesaId: string) => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await authenticatedPost('/api/electoral/actas/delete', { mesaId });
+      setDeletingMesaId(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Error al eliminar el acta');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   // Datos centralizados desde el ElectoralProvider
   const { locales, mesas, actas, personeros, loading } = useElectoral();
 
@@ -789,18 +808,34 @@ export default function ControlElectoralDashboard() {
                               {totalMesa}
                             </td>
                             <td className="px-3.5 py-2.5 text-center">
-                              {acta.foto_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setFotoPreview(acta.foto_url!)}
-                                  className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors"
-                                >
-                                  <Eye className="w-3.5 h-3.5 text-slate-600" />
-                                  <span>Ver Foto</span>
-                                </button>
-                              ) : (
-                                <span className="text-[11px] text-slate-400 italic">Sin foto</span>
-                              )}
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                {acta.foto_url ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFotoPreview(acta.foto_url!)}
+                                    className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-slate-600" />
+                                    <span>Ver Foto</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic">Sin foto</span>
+                                )}
+                                {isSuperOrAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDeleteError(null);
+                                      setDeletingMesaId(acta.mesa_numero || acta.mesa_id);
+                                    }}
+                                    className="inline-flex items-center gap-1 bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md text-[11px] font-bold border border-red-200 transition-colors"
+                                    title="Eliminar acta (Modo Dios / Administrador)"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                    <span>Eliminar</span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -844,6 +879,61 @@ export default function ControlElectoralDashboard() {
                 unoptimized
                 className="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-lg shadow-sm"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación (Modo Dios / Admin) */}
+      {deletingMesaId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-red-200">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-2.5 bg-red-100 rounded-xl">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Eliminar Acta Electoral</h3>
+                <p className="text-xs text-red-600 font-bold uppercase tracking-wider">Acción Modo Dios / Administrador</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200 text-sm text-slate-700 space-y-2">
+              <p>
+                ¿Confirmas eliminar permanentemente el acta de la <strong className="font-black text-slate-900">Mesa N.° {deletingMesaId}</strong>?
+              </p>
+              <p className="text-xs text-slate-500">
+                Esta acción descontará inmediatamente todos sus votos de los cómputos oficiales y dejará la mesa disponible para un nuevo ingreso. Esta operación queda registrada con tu correo en la auditoría inmutable.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="rounded-lg bg-red-50 p-3 text-xs font-semibold text-red-700 border border-red-200">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => {
+                  setDeletingMesaId(null);
+                  setDeleteError(null);
+                }}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => handleDeleteActa(deletingMesaId)}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50 shadow-sm"
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                <span>{isDeleting ? 'Eliminando...' : 'Sí, eliminar acta'}</span>
+              </button>
             </div>
           </div>
         </div>
