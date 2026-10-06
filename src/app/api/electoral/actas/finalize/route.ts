@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     const localId = cleanId(body.localId, 'El colegio');
     const extraction = normalizeActaExtraction(body.extraction);
     const mesaNumero = normalizeMesaNumber(extraction.mesaNumero);
-    const validation = validateFinalActa(extraction);
+    const columnMode = body.columnMode === 'completo' ? 'completo' : 'distrital';
+    const validation = validateFinalActa(extraction, columnMode);
     if (validation.errors.length > 0) throw new ApiError(400, validation.errors.join(' '));
 
     const { adminDb } = getAdminServices();

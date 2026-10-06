@@ -121,7 +121,10 @@ function requiredCount(value: number | null, label: string, errors: string[]): n
   return value;
 }
 
-export function validateFinalActa(input: ExtraccionActa): {
+export function validateFinalActa(
+  input: ExtraccionActa,
+  columnMode?: 'distrital' | 'completo',
+): {
   errors: string[];
   totalProvincial: number;
   totalDistrital: number;
@@ -130,10 +133,13 @@ export function validateFinalActa(input: ExtraccionActa): {
   if (!normalizeMesaNumber(input.mesaNumero)) errors.push('El número de mesa debe tener entre 4 y 10 dígitos.');
   if (input.resultados.length === 0) errors.push('El acta debe contener al menos una organización política.');
 
-  const hasProvincial =
-    input.totalesEmitidos.provincial !== null ||
-    input.resultados.some((r) => r.provincial !== null) ||
-    Object.values(input.especiales).some((e) => e.provincial !== null);
+  const hasProvincial = columnMode === 'distrital'
+    ? false
+    : (
+        input.totalesEmitidos.provincial !== null ||
+        input.resultados.some((r) => r.provincial !== null) ||
+        Object.values(input.especiales).some((e) => e.provincial !== null)
+      );
 
   let totalProvincial = 0;
   let totalDistrital = 0;

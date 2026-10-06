@@ -170,16 +170,46 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({ success: true, draftId: draftRef.id, extraction, imageUrl });
     } catch (error) {
-      await adminStorage.bucket(bucketName).file(imagePath).delete({ ignoreNotFound: true }).catch(() => undefined);
+      console.warn('Fallo en IA Gemini Vision, manteniendo imagen para digitación manual:', error);
+      const manualExtraction: ExtraccionActa = {
+        mesaNumero: '',
+        departamento: 'Lima',
+        provincia: 'Lima',
+        distrito: 'Chaclacayo',
+        electoresHabiles: null,
+        resultados: PARTIDOS_CHACLACAYO.map((p, idx) => ({
+          orden: idx + 1,
+          organizacion: p.nombre,
+          provincial: null,
+          distrital: null,
+          confianza: 1,
+        })),
+        especiales: {
+          blancos: { provincial: null, distrital: null },
+          nulos: { provincial: null, distrital: null },
+          impugnados: { provincial: null, distrital: null },
+        },
+        totalesEmitidos: { provincial: null, distrital: null },
+        ciudadanosVotaron: null,
+        observaciones: 'Ingreso manual por falla de IA',
+        confianzaGeneral: 0,
+        advertencias: ['La lectura automática no estuvo disponible; puedes digitar los números directamente viendo la fotografía.'],
+      };
       await draftRef.update({
-        status: 'failed',
-        failure: error instanceof Error ? error.message.slice(0, 300) : 'No se pudo analizar.',
-        imageDeleted: true,
-        imagePath: FieldValue.delete(),
-        imageUrl: FieldValue.delete(),
+        status: 'review',
+        extraction: manualExtraction,
+        modelVersion: 'manual-entry-fallback',
+        failure: error instanceof Error ? error.message.slice(0, 300) : 'Fallo de IA',
         updatedAt: FieldValue.serverTimestamp(),
       });
-      throw error;
+      return NextResponse.json({
+        success: true,
+        draftId: draftRef.id,
+        extraction: manualExtraction,
+        imageUrl,
+        iaFailed: true,
+        iaErrorMessage: 'No se pudo leer con IA. Puedes digitar manualmente a continuación con la foto en pantalla.',
+      });
     }
   } catch (error) {
     return apiErrorResponse(error);
