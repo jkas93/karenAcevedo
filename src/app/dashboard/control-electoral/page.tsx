@@ -22,6 +22,7 @@ import {
   Wifi,
   X,
   Trash2,
+  Edit3,
 } from 'lucide-react';
 import {
   BarChart,
@@ -39,6 +40,7 @@ import { defaultElectoralTab } from '@/lib/access-control';
 import { useAccess } from '@/components/access/AccessContext';
 import { PersonerosPanel } from '@/components/electoral/PersonerosPanel';
 import { ColegiosDetallePanel } from '@/components/electoral/ColegiosDetallePanel';
+import { ModoDiosActaEditModal } from '@/components/electoral/ModoDiosActaEditModal';
 import { ACTAS_ESPERADAS } from '@/lib/electoral/acta-schema';
 import { authenticatedPost } from '@/lib/firebase/authenticated-request';
 import type { Acta } from '@/lib/firebase/types';
@@ -83,6 +85,8 @@ export default function ControlElectoralDashboard() {
   const [actasSearch, setActasSearch] = useState('');
   const [actasFotoFilter, setActasFotoFilter] = useState<'todas' | 'con_foto' | 'sin_foto'>('todas');
   const isSuperOrAdmin = role === 'superusuario' || role === 'administrador';
+  const isGodMode = role === 'superusuario';
+  const [editingActa, setEditingActa] = useState<Acta | null>(null);
   const [deletingMesaId, setDeletingMesaId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -784,9 +788,19 @@ export default function ControlElectoralDashboard() {
                               {acta.timestamp.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
                             </td>
                             <td className="px-3.5 py-2.5">
-                              <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                {mesa?.numero || acta.mesa_id}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                  {mesa?.numero || acta.mesa_id}
+                                </span>
+                                {acta.modo_dios_override && (
+                                  <span
+                                    className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300"
+                                    title={`Modificada por Modo Dios: ${acta.motivo_modificacion || 'Ajuste auditado'}`}
+                                  >
+                                    Modo Dios
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-3.5 py-2.5">
                               <p className="font-medium text-slate-800 truncate max-w-[200px]">
@@ -820,6 +834,17 @@ export default function ControlElectoralDashboard() {
                                   </button>
                                 ) : (
                                   <span className="text-[11px] text-slate-400 italic">Sin foto</span>
+                                )}
+                                {isGodMode && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingActa(acta)}
+                                    className="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-800 px-2.5 py-1 rounded-md text-[11px] font-bold border border-amber-300 transition-colors shadow-2xs"
+                                    title="Modificar acta electoral (Modo Dios)"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>Modificar</span>
+                                  </button>
                                 )}
                                 {isSuperOrAdmin && (
                                   <button
@@ -937,6 +962,19 @@ export default function ControlElectoralDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Modificación de Acta (Modo Dios) */}
+      {editingActa && (
+        <ModoDiosActaEditModal
+          acta={editingActa}
+          mesa={mesas.find((m) => m.id === editingActa.mesa_id || m.numero === editingActa.mesa_id)}
+          local={locales.find((l) => l.id === (editingActa.local_id || mesas.find((m) => m.id === editingActa.mesa_id || m.numero === editingActa.mesa_id)?.local_id))}
+          onClose={() => setEditingActa(null)}
+          onSuccess={() => {
+            setEditingActa(null);
+          }}
+        />
       )}
     </div>
   );

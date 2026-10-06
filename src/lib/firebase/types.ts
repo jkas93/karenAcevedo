@@ -74,12 +74,18 @@ export type Acta = {
     impugnados: ConteoDoble;
   };
   totales_emitidos?: ConteoDoble;
+  total_distrital?: number;
+  total_provincial?: number;
   electores_habiles?: number | null;
   ciudadanos_votaron?: number | null;
   observaciones?: string;
   schema_version?: number;
   foto_url?: string;
   timestamp: Date;
+  modo_dios_override?: boolean;
+  motivo_modificacion?: string;
+  modificado_por?: string;
+  modificado_at?: any;
 };
 
 export type Voluntario = {
