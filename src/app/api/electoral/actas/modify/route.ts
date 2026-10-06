@@ -32,9 +32,14 @@ export async function POST(request: Request) {
     const body = await readJsonBody(request);
 
     const rawMesaId = body.mesaId ?? body.mesaNumero;
-    const mesaNumero = normalizeMesaNumber(rawMesaId);
-    if (!mesaNumero) {
+    const mesaNumeroActual = normalizeMesaNumber(rawMesaId);
+    if (!mesaNumeroActual) {
       throw new ApiError(400, 'Número de mesa no válido o no proporcionado.');
+    }
+
+    const nuevoMesaNumero = body.nuevoMesaNumero ? normalizeMesaNumber(body.nuevoMesaNumero) : mesaNumeroActual;
+    if (!nuevoMesaNumero) {
+      throw new ApiError(400, 'El nuevo número de mesa ingresado no es válido (debe tener entre 4 y 10 dígitos numéricos).');
     }
 
     const motivo = sanitizeText(body.motivo, 500) || 'Modificación directa autorizada por Modo Dios en auditoría';
@@ -133,20 +138,34 @@ export async function POST(request: Request) {
       : (distritalList[8] ?? distritalList[0] ?? 0);
 
     const { adminDb } = getAdminServices();
-    const actaRef = adminDb.collection('actas').doc(mesaNumero);
+    const actaRef = adminDb.collection('actas').doc(mesaNumeroActual);
+    const mesaRef = adminDb.collection('mesas').doc(mesaNumeroActual);
     const auditRef = adminDb.collection('electoralAudit').doc();
+
+    const isMesaNumberChanged = nuevoMesaNumero !== mesaNumeroActual;
+    const targetActaRef = isMesaNumberChanged ? adminDb.collection('actas').doc(nuevoMesaNumero) : actaRef;
+    const targetMesaRef = isMesaNumberChanged ? adminDb.collection('mesas').doc(nuevoMesaNumero) : mesaRef;
 
     let previousActaData: Record<string, unknown> | null = null;
 
     await adminDb.runTransaction(async (transaction) => {
       const actaDoc = await transaction.get(actaRef);
       if (!actaDoc.exists) {
-        throw new ApiError(404, `El acta de la mesa ${mesaNumero} no existe.`);
+        throw new ApiError(404, `El acta de la mesa ${mesaNumeroActual} no existe.`);
+      }
+
+      if (isMesaNumberChanged) {
+        const targetActaDoc = await transaction.get(targetActaRef);
+        if (targetActaDoc.exists) {
+          throw new ApiError(409, `La mesa destino ${nuevoMesaNumero} ya tiene un acta confirmada.`);
+        }
       }
 
       previousActaData = actaDoc.data() || {};
 
       const updatePayload = {
+        mesa_id: nuevoMesaNumero,
+        mesa_numero: nuevoMesaNumero,
         resultados: cleanResultados,
         especiales: cleanEspeciales,
         totales_emitidos: cleanTotalesEmitidos,
@@ -168,18 +187,49 @@ export async function POST(request: Request) {
         modo_dios_override: true,
       };
 
-      transaction.set(actaRef, updatePayload, { merge: true });
+      if (isMesaNumberChanged) {
+        // Copiar todos los datos preexistentes (como foto_url, draft_id, etc.) combinados con los nuevos
+        transaction.set(targetActaRef, {
+          ...previousActaData,
+          ...updatePayload,
+        });
+        transaction.delete(actaRef);
+
+        // Migrar documento en colección mesas
+        transaction.delete(mesaRef);
+        transaction.set(targetMesaRef, {
+          numero: nuevoMesaNumero,
+          local_id: previousActaData?.local_id || null,
+          estado: 'enviada',
+          source: 'acta',
+          acta_id: nuevoMesaNumero,
+          updated_at: FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        // Si existe un borrador asociado, sincronizar el número de mesa
+        if (previousActaData?.draft_id) {
+          const draftRef = adminDb.collection('actaDrafts').doc(String(previousActaData.draft_id));
+          transaction.set(draftRef, {
+            'extraction.mesaNumero': nuevoMesaNumero,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        }
+      } else {
+        transaction.set(actaRef, updatePayload, { merge: true });
+      }
 
       // Registro de auditoría inmutable
       transaction.set(auditRef, {
-        action: 'acta.god_modify',
-        actaId: mesaNumero,
-        mesaNumero,
+        action: isMesaNumberChanged ? 'acta.god_modify_mesa' : 'acta.god_modify',
+        actaId: nuevoMesaNumero,
+        mesaNumero: nuevoMesaNumero,
+        mesaNumeroAnterior: isMesaNumberChanged ? mesaNumeroActual : null,
         localId: previousActaData?.local_id || null,
         actor: session.email,
         role: session.role,
         motivo,
         before: {
+          mesaNumero: mesaNumeroActual,
           resultados: previousActaData?.resultados ?? null,
           especiales: previousActaData?.especiales ?? null,
           totales_emitidos: previousActaData?.totales_emitidos ?? null,
@@ -192,6 +242,7 @@ export async function POST(request: Request) {
           observaciones: previousActaData?.observaciones ?? '',
         },
         after: {
+          mesaNumero: nuevoMesaNumero,
           resultados: cleanResultados,
           especiales: cleanEspeciales,
           totales_emitidos: cleanTotalesEmitidos,
@@ -209,8 +260,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Acta de la mesa ${mesaNumero} modificada exitosamente por Modo Dios.`,
-      mesaNumero,
+      message: isMesaNumberChanged
+        ? `Acta migrada de mesa ${mesaNumeroActual} a mesa ${nuevoMesaNumero} y modificada exitosamente por Modo Dios.`
+        : `Acta de la mesa ${nuevoMesaNumero} modificada exitosamente por Modo Dios.`,
+      mesaNumero: nuevoMesaNumero,
+      mesaNumeroAnterior: isMesaNumberChanged ? mesaNumeroActual : null,
     });
   } catch (error) {
     return apiErrorResponse(error);

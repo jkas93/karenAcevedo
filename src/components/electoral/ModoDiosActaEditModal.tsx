@@ -48,6 +48,8 @@ export function ModoDiosActaEditModal({
   onSuccess,
 }: ModoDiosActaEditModalProps) {
   const [showPhoto, setShowPhoto] = useState<boolean>(Boolean(acta.foto_url));
+  const initialMesa = acta.mesa_numero || acta.mesa_id || mesa?.numero || '';
+  const [mesaNumeroInput, setMesaNumeroInput] = useState<string>(initialMesa);
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState(acta.observaciones || '');
   const [electoresHabiles, setElectoresHabiles] = useState<number | ''>(
@@ -178,6 +180,7 @@ export function ModoDiosActaEditModal({
       const mesaNumero = acta.mesa_numero || acta.mesa_id;
       const payload = {
         mesaId: mesaNumero,
+        nuevoMesaNumero: mesaNumeroInput.trim(),
         motivo: motivo.trim() || 'Modificación directa autorizada por Modo Dios en auditoría',
         resultados: partidosRows.map((p) => ({
           orden: p.orden,
@@ -305,22 +308,41 @@ export function ModoDiosActaEditModal({
                 </div>
               )}
 
-              {/* Justificación obligatoria para auditoría inmutable */}
-              <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-1.5">
-                <label className="block text-xs font-bold text-amber-900">
-                  Motivo o Justificación de la Modificación <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Ej: Corrección manual de cifra ilegible en casilla distrital según foto original"
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-amber-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <p className="text-[11px] text-amber-700/90">
-                  Esta acción quedará registrada de forma inmutable en el historial de auditoría electoral con tu cuenta Modo Dios.
-                </p>
+              {/* Corrección de Número de Mesa y Justificación obligatoria */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1 bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-1.5">
+                  <label className="block text-xs font-bold text-amber-900">
+                    Número de Mesa <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={mesaNumeroInput}
+                    onChange={(e) => setMesaNumeroInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="041234"
+                    className="w-full text-xs font-mono font-bold px-3 py-2 rounded-lg border border-amber-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-amber-700/90">
+                    Modo Dios: editable si se digitó mal el número de mesa.
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2 bg-amber-50/60 border border-amber-200 rounded-xl p-3.5 space-y-1.5">
+                  <label className="block text-xs font-bold text-amber-900">
+                    Motivo o Justificación de la Modificación <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Ej: Corrección manual de número de mesa o votos según foto original"
+                    className="w-full text-xs px-3 py-2 rounded-lg border border-amber-300 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-amber-700/90">
+                    Esta acción quedará registrada de forma inmutable en el historial de auditoría electoral.
+                  </p>
+                </div>
               </div>
 
               {/* TABLA DE RESULTADOS POR PARTIDO */}

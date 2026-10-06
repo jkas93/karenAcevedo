@@ -822,15 +822,16 @@ export default function ControlElectoralDashboard() {
                               {totalMesa}
                             </td>
                             <td className="px-3.5 py-2.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                              <div className="flex items-center justify-center gap-1.5">
                                 {acta.foto_url ? (
                                   <button
                                     type="button"
                                     onClick={() => setFotoPreview(acta.foto_url!)}
-                                    className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors"
+                                    className="inline-flex items-center justify-center p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                                    title="Ver evidencia fotográfica"
+                                    aria-label="Ver evidencia fotográfica"
                                   >
-                                    <Eye className="w-3.5 h-3.5 text-slate-600" />
-                                    <span>Ver Foto</span>
+                                    <Eye className="w-4 h-4 text-slate-600" />
                                   </button>
                                 ) : (
                                   <span className="text-[11px] text-slate-400 italic">Sin foto</span>
@@ -839,11 +840,11 @@ export default function ControlElectoralDashboard() {
                                   <button
                                     type="button"
                                     onClick={() => setEditingActa(acta)}
-                                    className="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-800 px-2.5 py-1 rounded-md text-[11px] font-bold border border-amber-300 transition-colors shadow-2xs"
+                                    className="inline-flex items-center justify-center p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md border border-amber-300 transition-colors shadow-2xs"
                                     title="Modificar acta electoral (Modo Dios)"
+                                    aria-label="Modificar acta electoral"
                                   >
-                                    <Edit3 className="w-3.5 h-3.5 text-amber-600" />
-                                    <span>Modificar</span>
+                                    <Edit3 className="w-4 h-4 text-amber-600" />
                                   </button>
                                 )}
                                 {isSuperOrAdmin && (
@@ -853,11 +854,11 @@ export default function ControlElectoralDashboard() {
                                       setDeleteError(null);
                                       setDeletingMesaId(acta.mesa_numero || acta.mesa_id);
                                     }}
-                                    className="inline-flex items-center gap-1 bg-red-50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md text-[11px] font-bold border border-red-200 transition-colors"
+                                    className="inline-flex items-center justify-center p-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-md border border-red-200 transition-colors"
                                     title="Eliminar acta (Modo Dios / Administrador)"
+                                    aria-label="Eliminar acta"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                                    <span>Eliminar</span>
+                                    <Trash2 className="w-4 h-4 text-red-600" />
                                   </button>
                                 )}
                               </div>
