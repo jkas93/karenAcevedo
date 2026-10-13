@@ -171,9 +171,77 @@ export default function DigitacionCentralPage() {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
+  // ─── Forzar Ingreso Manual Inmediato (Bypass de IA) ────────────────────────
+  const goToManualDigitization = () => {
+    if (!canManage || !localId) return;
+
+    // Crear de inmediato la plantilla con los 12 partidos oficiales de Chaclacayo
+    const completeResultados = PARTIDOS_CHACLACAYO.map((p, idx) => ({
+      orden: idx + 1,
+      organizacion: p.nombre,
+      alias: p.alias,
+      color: p.color,
+      esPropio: p.esPropio,
+      distrital: null,
+      provincial: null,
+      confianza: 1,
+    }));
+
+    const manualTemplate: ExtraccionActa = {
+      mesaNumero: normalizedMesaDigitada || '',
+      departamento: 'Lima',
+      provincia: 'Lima',
+      distrito: 'Chaclacayo',
+      electoresHabiles: null,
+      resultados: completeResultados,
+      especiales: {
+        blancos: { provincial: null, distrital: null },
+        nulos: { provincial: null, distrital: null },
+        impugnados: { provincial: null, distrital: null },
+      },
+      totalesEmitidos: { provincial: null, distrital: null },
+      ciudadanosVotaron: null,
+      observaciones: 'Ingreso manual directo',
+      confianzaGeneral: 1,
+      advertencias: [],
+    };
+
+    setExtraction(manualTemplate);
+    setMesaLeidaPorIA(null);
+    setIsAnalyzing(false);
+    setIaError('');
+    setGeneralError('');
+
+    // FORZAR INMEDIATAMENTE AL PASO 3 (SIN ESPERAS NI BLOQUEOS)
+    setCurrentStep(3);
+
+    // En segundo plano: Si hay foto y aún no hay draftId, crear el borrador en servidor
+    if (!draftId && imageFile) {
+      const form = new FormData();
+      form.set('localId', localId);
+      form.set('image', imageFile);
+      form.set('manual', 'true');
+
+      authenticatedFormPost<AnalyzeResponse>('/api/electoral/actas/analyze', form)
+        .then((res) => {
+          if (res?.draftId) {
+            setDraftId(res.draftId);
+          }
+        })
+        .catch((err) => {
+          console.warn('Draft en segundo plano pendiente, se resolverá al guardar:', err);
+        });
+    }
+  };
+
   // ─── Proceso de Análisis / Entrada Manual ─────────────────────────────────
   const processImage = async (manual = false) => {
     if (!canManage || !localId || !imageFile) return;
+    if (manual) {
+      goToManualDigitization();
+      return;
+    }
+
     setIsAnalyzing(true);
     setIaError('');
     setGeneralError('');
@@ -182,7 +250,6 @@ export default function DigitacionCentralPage() {
       const form = new FormData();
       form.set('localId', localId);
       form.set('image', imageFile);
-      if (manual) form.set('manual', 'true');
 
       const response = await authenticatedFormPost<AnalyzeResponse>('/api/electoral/actas/analyze', form);
       const rawExtraccion = normalizeActaExtraction(response.extraction);
@@ -257,7 +324,7 @@ export default function DigitacionCentralPage() {
 
   // Confirmar y guardar acta
   const handleFinalize = async () => {
-    if (!extraction || !draftId || !localId || !validation || validation.errors.length > 0) return;
+    if (!extraction || !localId || !validation || validation.errors.length > 0) return;
     if (mesaExiste && !rectificar) {
       setGeneralError(`La mesa ${extraction.mesaNumero} ya está confirmada. Activa la opción de rectificación para actualizarla.`);
       return;
@@ -265,8 +332,24 @@ export default function DigitacionCentralPage() {
     setIsSaving(true);
     setGeneralError('');
     try {
+      let finalDraftId = draftId;
+      // Si el draft en segundo plano aún no estaba listo o falló por red, lo aseguramos aquí antes de finalizar
+      if (!finalDraftId && imageFile) {
+        const form = new FormData();
+        form.set('localId', localId);
+        form.set('image', imageFile);
+        form.set('manual', 'true');
+        const res = await authenticatedFormPost<AnalyzeResponse>('/api/electoral/actas/analyze', form);
+        finalDraftId = res.draftId;
+        setDraftId(finalDraftId);
+      }
+
+      if (!finalDraftId) {
+        throw new Error('No se pudo asociar la fotografía del acta. Por favor reintenta guardar.');
+      }
+
       await authenticatedPost('/api/electoral/actas/finalize', {
-        draftId,
+        draftId: finalDraftId,
         localId,
         extraction,
         rectificar,
@@ -563,11 +646,10 @@ export default function DigitacionCentralPage() {
                       </p>
                       <button
                         type="button"
-                        onClick={() => processImage(true)}
-                        disabled={isAnalyzing}
-                        className="inline-flex items-center gap-2 rounded-lg bg-amber-800 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-900 shadow-sm transition"
+                        onClick={goToManualDigitization}
+                        className="inline-flex items-center gap-2 rounded-xl bg-amber-800 px-4 py-2 text-xs font-bold text-white hover:bg-amber-900 shadow-sm transition"
                       >
-                        <PenLine size={14} />
+                        <PenLine size={15} />
                         <span>Digitalizar manualmente ahora</span>
                       </button>
                     </div>
@@ -597,8 +679,8 @@ export default function DigitacionCentralPage() {
 
                   <button
                     type="button"
-                    disabled={!imageFile || isAnalyzing}
-                    onClick={() => processImage(true)}
+                    disabled={!imageFile}
+                    onClick={goToManualDigitization}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-3.5 font-bold text-slate-800 shadow-sm hover:border-primary hover:bg-blue-50/40 hover:text-primary transition disabled:cursor-not-allowed disabled:opacity-40 text-xs sm:text-sm"
                   >
                     <PenLine size={18} />
