@@ -553,14 +553,23 @@ export default function DigitacionCentralPage() {
 
                 {/* Mensaje de fallo de IA si ocurrió */}
                 {iaError && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 flex items-start gap-2">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Aviso sobre la IA:</p>
-                      <p>{iaError}</p>
-                      <p className="mt-1 font-semibold text-amber-800">
-                        No te preocupes: puedes pulsar el botón <strong>&quot;Digitar manualmente con esta foto&quot;</strong> para continuar de inmediato.
+                    <div className="space-y-1.5 flex-1">
+                      <p className="font-bold">Aviso sobre el reconocimiento por IA:</p>
+                      <p className="text-slate-700">{iaError}</p>
+                      <p className="text-amber-900 font-medium">
+                        Puedes continuar directamente ingresando los votos de los 12 partidos oficiales:
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => processImage(true)}
+                        disabled={isAnalyzing}
+                        className="inline-flex items-center gap-2 rounded-lg bg-amber-800 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-900 shadow-sm transition"
+                      >
+                        <PenLine size={14} />
+                        <span>Digitalizar manualmente ahora</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -590,10 +599,10 @@ export default function DigitacionCentralPage() {
                     type="button"
                     disabled={!imageFile || isAnalyzing}
                     onClick={() => processImage(true)}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3.5 font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition disabled:cursor-not-allowed disabled:opacity-40 text-xs sm:text-sm"
+                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-3.5 font-bold text-slate-800 shadow-sm hover:border-primary hover:bg-blue-50/40 hover:text-primary transition disabled:cursor-not-allowed disabled:opacity-40 text-xs sm:text-sm"
                   >
                     <PenLine size={18} />
-                    <span>Digitar manualmente con esta foto</span>
+                    <span>Digitalizar manualmente</span>
                   </button>
                 </div>
 

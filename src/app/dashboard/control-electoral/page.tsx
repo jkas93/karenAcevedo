@@ -40,6 +40,7 @@ import { defaultElectoralTab } from '@/lib/access-control';
 import { useAccess } from '@/components/access/AccessContext';
 import { PersonerosPanel } from '@/components/electoral/PersonerosPanel';
 import { ColegiosDetallePanel } from '@/components/electoral/ColegiosDetallePanel';
+import { AnalisisElectoralPanel } from '@/components/electoral/AnalisisElectoralPanel';
 import { ModoDiosActaEditModal } from '@/components/electoral/ModoDiosActaEditModal';
 import { ACTAS_ESPERADAS } from '@/lib/electoral/acta-schema';
 import { authenticatedPost } from '@/lib/firebase/authenticated-request';
@@ -58,7 +59,7 @@ const MapChaclacayo = dynamic(
   }
 );
 
-type TabType = 'resumen' | 'colegios' | 'personeros' | 'actas';
+type TabType = 'resumen' | 'analisis' | 'colegios' | 'personeros' | 'actas';
 
 const RESULT_COLORS = ['#0070C0', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#be123c', '#4f46e5'];
 
@@ -336,7 +337,7 @@ export default function ControlElectoralDashboard() {
       </div>
 
       {/* Pestañas Operativas (Segmented Navigation) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
         <button
           type="button"
           onClick={() => setActiveTab('resumen')}
@@ -348,6 +349,28 @@ export default function ControlElectoralDashboard() {
         >
           <Activity className={`w-4 h-4 ${activeTab === 'resumen' ? 'text-primary' : 'text-slate-500'}`} />
           <span>Sala de Guerra</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('analisis')}
+          className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            activeTab === 'analisis'
+              ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          }`}
+        >
+          <TrendingUp className={`w-4 h-4 ${activeTab === 'analisis' ? 'text-primary' : 'text-slate-500'}`} />
+          <span className="truncate">Comportamiento Elector</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              activeTab === 'analisis'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-slate-200 text-slate-600'
+            }`}
+          >
+            IA
+          </span>
         </button>
 
         <button
@@ -619,6 +642,18 @@ export default function ControlElectoralDashboard() {
               </Card>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: ANÁLISIS DEL COMPORTAMIENTO ELECTORAL */}
+      {activeTab === 'analisis' && (
+        <div className="animate-in fade-in-50 duration-200">
+          <AnalisisElectoralPanel
+            locales={locales}
+            mesas={mesas}
+            actas={actas}
+            personeros={personeros}
+          />
         </div>
       )}
 

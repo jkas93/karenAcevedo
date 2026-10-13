@@ -158,6 +158,6 @@ export function permissionForDashboardPath(pathname: string): PermissionKey {
  * - 'coordinador': abre directamente la pestaña "Centros de Votación".
  * - Todos los demás roles: abre la "Sala de Guerra" (resumen).
  */
-export function defaultElectoralTab(role: UserRole): 'resumen' | 'colegios' | 'personeros' | 'actas' {
+export function defaultElectoralTab(role: UserRole): 'resumen' | 'analisis' | 'colegios' | 'personeros' | 'actas' {
   return role === 'coordinador' ? 'colegios' : 'resumen';
 }
