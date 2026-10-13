@@ -31,6 +31,7 @@ import {
 import { PARTIDOS_CHACLACAYO } from '@/lib/firebase/types';
 import { authenticatedFormPost, authenticatedPost } from '@/lib/firebase/authenticated-request';
 import { useElectoral } from '@/lib/firebase/ElectoralContext';
+import { convertImageFileToWebP } from '@/lib/electoral/image-optimizer';
 
 type AnalyzeResponse = {
   success: true;
@@ -81,6 +82,12 @@ export default function DigitacionCentralPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isConvertingImage, setIsConvertingImage] = useState(false);
+  const [webpInfo, setWebpInfo] = useState<{
+    originalSizeKB: number;
+    optimizedSizeKB: number;
+    savingsPercent: number;
+  } | null>(null);
   const [iaError, setIaError] = useState('');
 
   // Paso 3: Revisión y confirmación
@@ -144,6 +151,8 @@ export default function DigitacionCentralPage() {
     setImageFile(null);
     setPreviewUrl('');
     setIsAnalyzing(false);
+    setIsConvertingImage(false);
+    setWebpInfo(null);
     setIaError('');
     setDraftId('');
     setExtraction(null);
@@ -154,7 +163,7 @@ export default function DigitacionCentralPage() {
     setGeneralError('');
   };
 
-  const handleChooseImage = (file?: File) => {
+  const handleChooseImage = async (file?: File) => {
     setIaError('');
     setGeneralError('');
     if (!file) return;
@@ -162,13 +171,33 @@ export default function DigitacionCentralPage() {
       setGeneralError('Usa una fotografía JPG, PNG o WebP.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setGeneralError('La fotografía no debe superar los 10 MB.');
+    if (file.size > 20 * 1024 * 1024) {
+      setGeneralError('La fotografía no debe superar los 20 MB.');
       return;
     }
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setImageFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+
+    setIsConvertingImage(true);
+    try {
+      const res = await convertImageFileToWebP(file, { maxDimension: 1920, quality: 0.85 });
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setImageFile(res.file);
+      setPreviewUrl(URL.createObjectURL(res.file));
+      const origKB = Math.round(res.originalSize / 1024);
+      const optKB = Math.round(res.optimizedSize / 1024);
+      setWebpInfo({
+        originalSizeKB: origKB,
+        optimizedSizeKB: optKB,
+        savingsPercent: res.savingsPercent,
+      });
+    } catch (err) {
+      console.warn('Conversión a WebP falló, usando archivo directo:', err);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setWebpInfo(null);
+    } finally {
+      setIsConvertingImage(false);
+    }
   };
 
   // ─── Forzar Ingreso Manual Inmediato (Bypass de IA) ────────────────────────
@@ -609,27 +638,39 @@ export default function DigitacionCentralPage() {
               <CardContent className="space-y-4">
                 {/* Zona de captura o subida */}
                 <label className="relative flex min-h-[340px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-center transition hover:border-primary hover:bg-blue-50/30">
-                  {previewUrl ? (
+                  {isConvertingImage ? (
+                    <div className="p-8 flex flex-col items-center justify-center">
+                      <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
+                      <p className="font-bold text-slate-800 text-sm">Convirtiendo y optimizando a formato WebP...</p>
+                      <p className="mt-1 text-xs text-slate-400">Garantizando máxima nitidez de números y compresión ultraliviana</p>
+                    </div>
+                  ) : previewUrl ? (
                     <div className="relative w-full h-[340px] flex items-center justify-center bg-slate-900/5">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={previewUrl} alt="Vista previa del acta" className="max-h-full max-w-full object-contain" />
-                      <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1.5">
+                      <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm flex items-center gap-2">
                         <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Foto lista (haz clic para cambiar)</span>
+                        <span>Foto lista</span>
+                        {webpInfo && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+                            WebP {webpInfo.optimizedSizeKB} KB ({webpInfo.savingsPercent}% optimizada)
+                          </span>
+                        )}
                       </div>
                     </div>
                   ) : (
                     <div className="p-8">
                       <Camera className="mx-auto mb-3 h-12 w-12 text-slate-400" />
                       <p className="font-bold text-slate-700 text-sm">Tomar foto o cargar imagen del acta</p>
-                      <p className="mt-1 text-xs text-slate-400">JPG, PNG o WebP · hasta 10 MB</p>
+                      <p className="mt-1 text-xs text-slate-400">JPG, PNG o WebP · Se convertirá automáticamente a WebP optimizado</p>
                     </div>
                   )}
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
                     capture="environment"
-                    className="absolute inset-0 cursor-pointer opacity-0"
+                    disabled={isConvertingImage || isAnalyzing}
+                    className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
                     onChange={(e) => handleChooseImage(e.target.files?.[0])}
                   />
                 </label>
@@ -660,7 +701,7 @@ export default function DigitacionCentralPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <button
                     type="button"
-                    disabled={!imageFile || isAnalyzing}
+                    disabled={!imageFile || isAnalyzing || isConvertingImage}
                     onClick={() => processImage(false)}
                     className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 font-bold text-white shadow-sm hover:bg-primary-dark transition disabled:cursor-not-allowed disabled:opacity-40 text-xs sm:text-sm"
                   >
@@ -679,7 +720,7 @@ export default function DigitacionCentralPage() {
 
                   <button
                     type="button"
-                    disabled={!imageFile}
+                    disabled={!imageFile || isConvertingImage}
                     onClick={goToManualDigitization}
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-3.5 font-bold text-slate-800 shadow-sm hover:border-primary hover:bg-blue-50/40 hover:text-primary transition disabled:cursor-not-allowed disabled:opacity-40 text-xs sm:text-sm"
                   >

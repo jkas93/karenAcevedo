@@ -23,6 +23,8 @@ import {
   X,
   Trash2,
   Edit3,
+  UploadCloud,
+  RefreshCw,
 } from 'lucide-react';
 import {
   BarChart,
@@ -84,13 +86,36 @@ export default function ControlElectoralDashboard() {
   const [modoTV, setModoTV] = useState(false);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [actasSearch, setActasSearch] = useState('');
-  const [actasFotoFilter, setActasFotoFilter] = useState<'todas' | 'con_foto' | 'sin_foto'>('todas');
+  const [actasFotoFilter, setActasFotoFilter] = useState<'todas' | 'con_foto' | 'sin_foto' | 'pendientes'>('todas');
   const isSuperOrAdmin = role === 'superusuario' || role === 'administrador';
   const isGodMode = role === 'superusuario';
   const [editingActa, setEditingActa] = useState<Acta | null>(null);
   const [deletingMesaId, setDeletingMesaId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [regularizingMesaId, setRegularizingMesaId] = useState<string | null>(null);
+  const [regularizeFeedback, setRegularizeFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleRegularizePhoto = async (mesaId: string) => {
+    setRegularizingMesaId(mesaId);
+    setRegularizeFeedback(null);
+    try {
+      const res = await authenticatedPost<{ success: boolean; message: string; regularized: number }>('/api/electoral/actas/regularize-photo', {
+        mesaId,
+      });
+      setRegularizeFeedback({
+        type: res?.regularized && res.regularized > 0 ? 'success' : 'error',
+        message: res?.message || 'Proceso finalizado.',
+      });
+    } catch (err) {
+      setRegularizeFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Error al sincronizar con Cloud Storage.',
+      });
+    } finally {
+      setRegularizingMesaId(null);
+    }
+  };
 
   const handleDeleteActa = async (mesaId: string) => {
     setIsDeleting(true);
@@ -186,7 +211,8 @@ export default function ControlElectoralDashboard() {
         ? [...actas].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0]
         : null;
 
-    const actasConFotoCount = actas.filter((a) => Boolean(a.foto_url)).length;
+    const actasConFotoCount = actas.filter((a) => Boolean(a.foto_url) && !a.foto_pendiente && a.foto_estado !== 'pendiente_regularizacion').length;
+    const actasPendientesFotoCount = actas.filter((a) => Boolean(a.foto_pendiente || a.foto_estado === 'pendiente_regularizacion' || (a.foto_backup_base64 && !a.foto_path))).length;
 
     return {
       totalMesas,
@@ -202,6 +228,7 @@ export default function ControlElectoralDashboard() {
       colegiosCompletados,
       ultimaActa,
       actasConFotoCount,
+      actasPendientesFotoCount,
     };
   }, [mesas, actas, locales]);
 
@@ -271,8 +298,15 @@ export default function ControlElectoralDashboard() {
         const mesa = mesas.find((m) => m.id === acta.mesa_id || m.numero === acta.mesa_id);
         const local = locales.find((l) => l.id === (acta.local_id || mesa?.local_id));
 
-        if (actasFotoFilter === 'con_foto' && !acta.foto_url) return false;
-        if (actasFotoFilter === 'sin_foto' && acta.foto_url) return false;
+        const isPendiente = Boolean(
+          acta.foto_pendiente ||
+          acta.foto_estado === 'pendiente_regularizacion' ||
+          (acta.foto_backup_base64 && !acta.foto_path)
+        );
+
+        if (actasFotoFilter === 'con_foto' && (!acta.foto_url || isPendiente)) return false;
+        if (actasFotoFilter === 'pendientes' && !isPendiente) return false;
+        if (actasFotoFilter === 'sin_foto' && (acta.foto_url || acta.foto_backup_base64)) return false;
 
         if (!actasSearch.trim()) return true;
         const q = actasSearch.toLowerCase().trim();
@@ -706,9 +740,16 @@ export default function ControlElectoralDashboard() {
                 <p className="text-2xl font-bold text-slate-900 mt-1">
                   {stats.actasConFotoCount} / {actas.length}
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  {actas.length > 0 ? Math.round((stats.actasConFotoCount / actas.length) * 100) : 0}% con foto
-                </p>
+                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                  <span className="text-[11px] text-slate-500">
+                    {actas.length > 0 ? Math.round((stats.actasConFotoCount / actas.length) * 100) : 0}% en Storage
+                  </span>
+                  {stats.actasPendientesFotoCount > 0 && (
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                      {stats.actasPendientesFotoCount} en respaldo
+                    </span>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -735,6 +776,66 @@ export default function ControlElectoralDashboard() {
             </Card>
           </div>
 
+          {/* Banner de Modo Resiliente para regularización de fotos */}
+          {stats.actasPendientesFotoCount > 0 && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-xs text-amber-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-sm text-amber-950">
+                    Modo Resiliente: {stats.actasPendientesFotoCount} acta(s) con foto en respaldo temporal base64
+                  </p>
+                  <p className="text-amber-800 text-xs mt-0.5">
+                    Todos los votos están 100% seguros y conciliados en los cómputos oficiales. Las fotografías están resguardadas en Firestore y pueden sincronizarse a Cloud Storage una vez regularizada la facturación de Google Cloud.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActasFotoFilter('pendientes')}
+                  className="px-3 py-1.5 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold text-xs transition"
+                >
+                  Ver pendientes
+                </button>
+                {isSuperOrAdmin && (
+                  <button
+                    type="button"
+                    disabled={regularizingMesaId !== null}
+                    onClick={() => handleRegularizePhoto('all')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs shadow-sm transition disabled:opacity-50"
+                  >
+                    {regularizingMesaId === 'all' ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <UploadCloud className="w-3.5 h-3.5" />
+                    )}
+                    <span>Sincronizar a Storage</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {regularizeFeedback && (
+            <div
+              className={`rounded-xl p-3 text-xs font-semibold border flex items-center justify-between gap-2 ${
+                regularizeFeedback.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-red-50 text-red-800 border-red-200'
+              }`}
+            >
+              <span>{regularizeFeedback.message}</span>
+              <button
+                type="button"
+                onClick={() => setRegularizeFeedback(null)}
+                className="p-1 text-slate-500 hover:text-slate-800"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Filtros y Buscador */}
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
@@ -758,12 +859,13 @@ export default function ControlElectoralDashboard() {
                   {/* Selector de filtro de foto */}
                   <select
                     value={actasFotoFilter}
-                    onChange={(e) => setActasFotoFilter(e.target.value as 'todas' | 'con_foto' | 'sin_foto')}
+                    onChange={(e) => setActasFotoFilter(e.target.value as 'todas' | 'con_foto' | 'sin_foto' | 'pendientes')}
                     aria-label="Filtrar actas por evidencia fotográfica"
                     className="py-1.5 px-2.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="todas">Todas las actas</option>
-                    <option value="con_foto">Solo con foto</option>
+                    <option value="todas">Todas las actas ({actas.length})</option>
+                    <option value="con_foto">Con foto en Storage ({stats.actasConFotoCount})</option>
+                    <option value="pendientes">Pendientes / Respaldo ({stats.actasPendientesFotoCount})</option>
                     <option value="sin_foto">Sin foto</option>
                   </select>
                 </div>
@@ -858,16 +960,41 @@ export default function ControlElectoralDashboard() {
                             </td>
                             <td className="px-3.5 py-2.5 text-center">
                               <div className="flex items-center justify-center gap-1.5">
-                                {acta.foto_url ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setFotoPreview(acta.foto_url!)}
-                                    className="inline-flex items-center justify-center p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
-                                    title="Ver evidencia fotográfica"
-                                    aria-label="Ver evidencia fotográfica"
-                                  >
-                                    <Eye className="w-4 h-4 text-slate-600" />
-                                  </button>
+                                {acta.foto_url || acta.foto_backup_base64 ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFotoPreview(acta.foto_url || acta.foto_backup_base64!)}
+                                      className="inline-flex items-center justify-center p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                                      title="Ver evidencia fotográfica"
+                                      aria-label="Ver evidencia fotográfica"
+                                    >
+                                      <Eye className="w-4 h-4 text-slate-600" />
+                                    </button>
+                                    {(acta.foto_pendiente || acta.foto_estado === 'pendiente_regularizacion' || (acta.foto_backup_base64 && !acta.foto_path)) && (
+                                      <span
+                                        className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300"
+                                        title="Fotografía en base64 de respaldo (Modo Resiliente). Pendiente de regularizar en Cloud Storage."
+                                      >
+                                        ⚡ Respaldo
+                                      </span>
+                                    )}
+                                    {isSuperOrAdmin && (acta.foto_pendiente || (acta.foto_backup_base64 && !acta.foto_path)) && (
+                                      <button
+                                        type="button"
+                                        disabled={regularizingMesaId === (acta.mesa_numero || acta.mesa_id)}
+                                        onClick={() => handleRegularizePhoto(acta.mesa_numero || acta.mesa_id)}
+                                        className="inline-flex items-center justify-center p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md border border-amber-200 transition-colors"
+                                        title="Sincronizar fotografía a Cloud Storage"
+                                      >
+                                        {regularizingMesaId === (acta.mesa_numero || acta.mesa_id) ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-700" />
+                                        ) : (
+                                          <UploadCloud className="w-3.5 h-3.5 text-amber-700" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
                                 ) : (
                                   <span className="text-[11px] text-slate-400 italic">Sin foto</span>
                                 )}

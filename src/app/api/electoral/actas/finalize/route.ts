@@ -67,8 +67,15 @@ export async function POST(request: Request) {
       }
 
       const districtResults = extraction.resultados.map((result) => result.distrital ?? 0);
-      const imageUrl = String(draft.data()?.imageUrl || '');
-      const imagePath = String(draft.data()?.imagePath || '');
+      const draftData = draft.data() || {};
+      const imageUrl = String(draftData.imageUrl || '');
+      const imagePath = String(draftData.imagePath || '');
+      const backupBase64 = String(draftData.fotoBackupBase64 || '');
+      const fotoPendiente = Boolean(
+        draftData.fotoPendienteRegularizacion ||
+        (!imagePath && !imageUrl.startsWith('https://firebasestorage'))
+      );
+
       const actaData = {
         mesa_id: mesaNumero,
         mesa_numero: mesaNumero,
@@ -89,14 +96,16 @@ export async function POST(request: Request) {
         votos_blancos: extraction.especiales.blancos.distrital || 0,
         votos_nulos: extraction.especiales.nulos.distrital || 0,
         votos_impugnados: extraction.especiales.impugnados.distrital || 0,
-        total_provincial: validation.totalProvincial,
         total_distrital: validation.totalDistrital,
-        foto_url: imageUrl,
-        foto_path: imagePath,
+        foto_url: imageUrl || backupBase64 || null,
+        foto_path: imagePath || null,
+        foto_pendiente: fotoPendiente,
+        foto_backup_base64: backupBase64 || null,
+        foto_estado: fotoPendiente ? 'pendiente_regularizacion' : 'almacenada',
         draft_id: draftId,
         schema_version: 2,
         extraction_confidence: extraction.confianzaGeneral,
-        extraction_model: draft.data()?.modelVersion || '',
+        extraction_model: draftData.modelVersion || '',
         confirmado_por: session.email,
         timestamp: FieldValue.serverTimestamp(),
       };

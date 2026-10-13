@@ -89,38 +89,63 @@ export async function POST(request: Request) {
 
     draftRef = adminDb.collection('actaDrafts').doc();
     const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    if (!bucketName) throw new ApiError(503, 'El almacenamiento de actas no está configurado.');
     const ext = mimeType === 'image/webp' ? 'webp' : (mimeType.split('/')[1] || 'jpg');
     const imagePath = `actas/${draftRef.id}.${ext}`;
     const imageToken = randomUUID();
-    await adminStorage.bucket(bucketName).file(imagePath).save(processedBuffer, {
-      resumable: false,
-      validation: 'crc32c',
-      metadata: {
-        contentType: mimeType,
-        cacheControl: 'private, max-age=0, no-store',
-        metadata: {
-          firebaseStorageDownloadTokens: imageToken,
-          ownerUid: session.token.uid,
-          draftId: draftRef.id,
-          sha256,
-        },
-      },
-    });
-    const imageUrl = downloadUrl(bucketName, imagePath, imageToken);
+    let imageUrl = '';
+    let storageAvailable = false;
+    let storageErrorMsg: string | null = null;
+
+    if (bucketName) {
+      try {
+        await adminStorage.bucket(bucketName).file(imagePath).save(processedBuffer, {
+          resumable: false,
+          validation: 'crc32c',
+          metadata: {
+            contentType: mimeType,
+            cacheControl: 'private, max-age=0, no-store',
+            metadata: {
+              firebaseStorageDownloadTokens: imageToken,
+              ownerUid: session.token.uid,
+              draftId: draftRef.id,
+              sha256,
+            },
+          },
+        });
+        imageUrl = downloadUrl(bucketName, imagePath, imageToken);
+        storageAvailable = true;
+      } catch (storageError) {
+        storageAvailable = false;
+        storageErrorMsg = storageError instanceof Error ? storageError.message : String(storageError);
+        console.warn('⚠️ Almacenamiento en Firebase Storage no disponible (facturación o cuota). Activando modo resiliente:', storageErrorMsg);
+      }
+    }
+
+    // Si la imagen comprimida (WebP) es menor a 800 KB, guardamos respaldo en base64 dentro de Firestore
+    const fotoBackupBase64 = processedBuffer.length <= 800_000
+      ? `data:${mimeType};base64,${processedBuffer.toString('base64')}`
+      : null;
+
+    if (!imageUrl && fotoBackupBase64) {
+      imageUrl = fotoBackupBase64;
+    }
+
     await draftRef.set({
       status: 'processing',
       localId,
       localName: local.data()?.nombre || '',
       actor: session.email,
       actorUid: session.token.uid,
-      imagePath,
-      imageUrl,
+      imagePath: storageAvailable ? imagePath : '',
+      imageUrl: imageUrl || '',
       imageMime: mimeType,
       imageWidth: imgWidth,
       imageHeight: imgHeight,
       imageBytes: processedBuffer.length,
       sha256,
+      fotoBackupBase64,
+      fotoPendienteRegularizacion: !storageAvailable,
+      fotoError: storageErrorMsg,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -157,7 +182,13 @@ export async function POST(request: Request) {
         modelVersion: 'manual-entry',
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return NextResponse.json({ success: true, draftId: draftRef.id, extraction: manualExtraction, imageUrl });
+      return NextResponse.json({
+        success: true,
+        draftId: draftRef.id,
+        extraction: manualExtraction,
+        imageUrl,
+        fotoPendienteRegularizacion: !storageAvailable,
+      });
     }
 
     try {
@@ -168,7 +199,13 @@ export async function POST(request: Request) {
         modelVersion,
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return NextResponse.json({ success: true, draftId: draftRef.id, extraction, imageUrl });
+      return NextResponse.json({
+        success: true,
+        draftId: draftRef.id,
+        extraction,
+        imageUrl,
+        fotoPendienteRegularizacion: !storageAvailable,
+      });
     } catch (error) {
       console.warn('Fallo en IA Gemini Vision, manteniendo imagen para digitación manual:', error);
       const manualExtraction: ExtraccionActa = {
@@ -207,6 +244,7 @@ export async function POST(request: Request) {
         draftId: draftRef.id,
         extraction: manualExtraction,
         imageUrl,
+        fotoPendienteRegularizacion: !storageAvailable,
         iaFailed: true,
         iaErrorMessage: 'No se pudo leer con IA. Puedes digitar manualmente a continuación con la foto en pantalla.',
       });

@@ -81,6 +81,12 @@ export type Acta = {
   observaciones?: string;
   schema_version?: number;
   foto_url?: string;
+  foto_path?: string;
+  foto_pendiente?: boolean;
+  foto_backup_base64?: string;
+  foto_estado?: 'almacenada' | 'pendiente_regularizacion';
+  foto_regularizada_at?: any;
+  foto_regularizada_por?: string;
   timestamp: Date;
   modo_dios_override?: boolean;
   motivo_modificacion?: string;
