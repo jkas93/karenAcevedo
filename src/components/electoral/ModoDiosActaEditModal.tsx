@@ -33,7 +33,6 @@ type PartyRowState = {
   color: string;
   esPropio: boolean;
   distrital: number;
-  provincial: number;
 };
 
 function normalizeName(str: string): string {
@@ -59,7 +58,7 @@ export function ModoDiosActaEditModal({
     acta.ciudadanos_votaron ?? acta.totales_emitidos?.distrital ?? '',
   );
 
-  // Inicializar filas de los 12 partidos
+  // Inicializar filas de los 12 partidos (Estrictamente Distrital)
   const [partidosRows, setPartidosRows] = useState<PartyRowState[]>(() => {
     return PARTIDOS_CHACLACAYO.map((p, idx) => {
       const pNormNombre = normalizeName(p.nombre);
@@ -71,11 +70,9 @@ export function ModoDiosActaEditModal({
       });
 
       let distritalVal = 0;
-      let provincialVal = 0;
 
       if (found) {
         distritalVal = found.distrital ?? 0;
-        provincialVal = found.provincial ?? 0;
       } else {
         if (p.esPropio) {
           distritalVal = acta.votos_partido_a || 0;
@@ -95,45 +92,30 @@ export function ModoDiosActaEditModal({
         color: p.color,
         esPropio: p.esPropio,
         distrital: distritalVal,
-        provincial: provincialVal,
       };
     });
   });
 
-  // Votos especiales
+  // Votos especiales (Estrictamente Distrital)
   const [blancosDistrital, setBlancosDistrital] = useState<number>(
     acta.especiales?.blancos?.distrital ?? acta.votos_blancos ?? 0,
   );
-  const [blancosProvincial, setBlancosProvincial] = useState<number>(
-    acta.especiales?.blancos?.provincial ?? 0,
-  );
-
   const [nulosDistrital, setNulosDistrital] = useState<number>(
     acta.especiales?.nulos?.distrital ?? acta.votos_nulos ?? 0,
   );
-  const [nulosProvincial, setNulosProvincial] = useState<number>(
-    acta.especiales?.nulos?.provincial ?? 0,
-  );
-
   const [impugnadosDistrital, setImpugnadosDistrital] = useState<number>(
     acta.especiales?.impugnados?.distrital ?? acta.votos_impugnados ?? 0,
   );
-  const [impugnadosProvincial, setImpugnadosProvincial] = useState<number>(
-    acta.especiales?.impugnados?.provincial ?? 0,
-  );
 
-  // Totales de acta manuscrita
+  // Totales de acta manuscrita (Estrictamente Distrital)
   const [totalDistritalActa, setTotalDistritalActa] = useState<number>(
     acta.totales_emitidos?.distrital ?? acta.total_distrital ?? 0,
-  );
-  const [totalProvincialActa, setTotalProvincialActa] = useState<number>(
-    acta.totales_emitidos?.provincial ?? acta.total_provincial ?? 0,
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Sumas automáticas calculadas
+  // Sumas automáticas distritales
   const sumPartidosDistrital = useMemo(
     () => partidosRows.reduce((acc, row) => acc + (row.distrital || 0), 0),
     [partidosRows],
@@ -144,28 +126,17 @@ export function ModoDiosActaEditModal({
   );
   const sumaTotalCalculadaDistrital = sumPartidosDistrital + sumEspecialesDistrital;
 
-  const sumPartidosProvincial = useMemo(
-    () => partidosRows.reduce((acc, row) => acc + (row.provincial || 0), 0),
-    [partidosRows],
-  );
-  const sumEspecialesProvincial = useMemo(
-    () => blancosProvincial + nulosProvincial + impugnadosProvincial,
-    [blancosProvincial, nulosProvincial, impugnadosProvincial],
-  );
-  const sumaTotalCalculadaProvincial = sumPartidosProvincial + sumEspecialesProvincial;
-
-  const handlePartyChange = (index: number, field: 'distrital' | 'provincial', value: string) => {
+  const handlePartyChange = (index: number, value: string) => {
     const parsed = value === '' ? 0 : Math.max(0, parseInt(value, 10) || 0);
     setPartidosRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: parsed };
+      next[index] = { ...next[index], distrital: parsed };
       return next;
     });
   };
 
   const handleAutoSetTotals = () => {
     setTotalDistritalActa(sumaTotalCalculadaDistrital);
-    setTotalProvincialActa(sumaTotalCalculadaProvincial);
     if (ciudadanosVotaron === '' || ciudadanosVotaron === 0) {
       setCiudadanosVotaron(sumaTotalCalculadaDistrital);
     }
@@ -186,17 +157,17 @@ export function ModoDiosActaEditModal({
           orden: p.orden,
           organizacion: p.nombre,
           distrital: p.distrital,
-          provincial: p.provincial,
+          provincial: null,
           confianza: 1,
         })),
         especiales: {
-          blancos: { distrital: blancosDistrital, provincial: blancosProvincial },
-          nulos: { distrital: nulosDistrital, provincial: nulosProvincial },
-          impugnados: { distrital: impugnadosDistrital, provincial: impugnadosProvincial },
+          blancos: { distrital: blancosDistrital, provincial: null },
+          nulos: { distrital: nulosDistrital, provincial: null },
+          impugnados: { distrital: impugnadosDistrital, provincial: null },
         },
         totalesEmitidos: {
           distrital: totalDistritalActa,
-          provincial: totalProvincialActa,
+          provincial: null,
         },
         electoresHabiles: electoresHabiles === '' ? null : electoresHabiles,
         ciudadanosVotaron: ciudadanosVotaron === '' ? null : ciudadanosVotaron,
@@ -366,7 +337,6 @@ export function ModoDiosActaEditModal({
                         <th className="px-3 py-2 w-8 text-center">N°</th>
                         <th className="px-3 py-2">Organización Política</th>
                         <th className="px-3 py-2 text-center w-28">Voto Distrital</th>
-                        <th className="px-3 py-2 text-center w-28">Voto Provincial</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -404,22 +374,12 @@ export function ModoDiosActaEditModal({
                               min="0"
                               max="2000"
                               value={party.distrital}
-                              onChange={(e) => handlePartyChange(index, 'distrital', e.target.value)}
+                              onChange={(e) => handlePartyChange(index, e.target.value)}
                               className={`w-20 text-center text-xs font-bold py-1 px-1.5 rounded-md border focus:outline-none focus:ring-2 ${
                                 party.esPropio
                                   ? 'border-blue-300 bg-white text-blue-900 focus:ring-blue-500'
                                   : 'border-slate-200 bg-white text-slate-800 focus:ring-amber-500'
                               }`}
-                            />
-                          </td>
-                          <td className="px-3 py-1.5 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              max="2000"
-                              value={party.provincial}
-                              onChange={(e) => handlePartyChange(index, 'provincial', e.target.value)}
-                              className="w-20 text-center text-xs font-medium py-1 px-1.5 rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
                             />
                           </td>
                         </tr>
@@ -429,88 +389,43 @@ export function ModoDiosActaEditModal({
                 </div>
               </div>
 
-              {/* VOTOS ESPECIALES (Blancos, Nulos, Impugnados) */}
+              {/* VOTOS ESPECIALES (Blancos, Nulos, Impugnados - Distrital) */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                  Votos Especiales de Mesa
+                  Votos Especiales de Mesa (Distrital)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
                     <p className="text-xs font-semibold text-slate-700">Votos en Blanco</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-500 block mb-0.5">Distrital</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={blancosDistrital}
-                          onChange={(e) => setBlancosDistrital(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-center text-xs font-bold py-1 rounded border border-slate-200 bg-white"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-500 block mb-0.5">Provincial</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={blancosProvincial}
-                          onChange={(e) => setBlancosProvincial(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-center text-xs font-medium py-1 rounded border border-slate-200 bg-white"
-                        />
-                      </div>
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      value={blancosDistrital}
+                      onChange={(e) => setBlancosDistrital(parseInt(e.target.value, 10) || 0)}
+                      className="w-full text-center text-xs font-bold py-1.5 rounded border border-slate-200 bg-white"
+                    />
                   </div>
 
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
                     <p className="text-xs font-semibold text-slate-700">Votos Nulos</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-500 block mb-0.5">Distrital</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={nulosDistrital}
-                          onChange={(e) => setNulosDistrital(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-center text-xs font-bold py-1 rounded border border-slate-200 bg-white"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-500 block mb-0.5">Provincial</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={nulosProvincial}
-                          onChange={(e) => setNulosProvincial(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-center text-xs font-medium py-1 rounded border border-slate-200 bg-white"
-                        />
-                      </div>
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      value={nulosDistrital}
+                      onChange={(e) => setNulosDistrital(parseInt(e.target.value, 10) || 0)}
+                      className="w-full text-center text-xs font-bold py-1.5 rounded border border-slate-200 bg-white"
+                    />
                   </div>
 
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
                     <p className="text-xs font-semibold text-slate-700">Votos Impugnados</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-500 block mb-0.5">Distrital</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={impugnadosDistrital}
-                          onChange={(e) => setImpugnadosDistrital(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-center text-xs font-bold py-1 rounded border border-slate-200 bg-white"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-[10px] text-slate-500 block mb-0.5">Provincial</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={impugnadosProvincial}
-                          onChange={(e) => setImpugnadosProvincial(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-center text-xs font-medium py-1 rounded border border-slate-200 bg-white"
-                        />
-                      </div>
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      value={impugnadosDistrital}
+                      onChange={(e) => setImpugnadosDistrital(parseInt(e.target.value, 10) || 0)}
+                      className="w-full text-center text-xs font-bold py-1.5 rounded border border-slate-200 bg-white"
+                    />
                   </div>
                 </div>
               </div>

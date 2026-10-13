@@ -87,7 +87,7 @@ export default function DigitacionCentralPage() {
   const [draftId, setDraftId] = useState('');
   const [extraction, setExtraction] = useState<ExtraccionActa | null>(null);
   const [mesaLeidaPorIA, setMesaLeidaPorIA] = useState<string | null>(null);
-  const [columnMode, setColumnMode] = useState<'distrital' | 'completo'>('distrital');
+  const columnMode = 'distrital' as const;
   const [rectificar, setRectificar] = useState(false);
   const [showPhotoInReview, setShowPhotoInReview] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -761,27 +761,10 @@ export default function DigitacionCentralPage() {
                       <span>{showPhotoInReview ? 'Ocultar Foto' : 'Ver Foto'}</span>
                     </button>
                   )}
-                  {/* Selector de modo distrital / completo */}
-                  <div className="flex items-center p-0.5 bg-slate-100 rounded-lg text-[11px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setColumnMode('distrital')}
-                      className={`px-2 py-1 rounded-md transition ${
-                        columnMode === 'distrital' ? 'bg-white text-primary shadow-xs' : 'text-slate-500'
-                      }`}
-                    >
-                      Distrital (Karen)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setColumnMode('completo')}
-                      className={`px-2 py-1 rounded-md transition ${
-                        columnMode === 'completo' ? 'bg-white text-primary shadow-xs' : 'text-slate-500'
-                      }`}
-                    >
-                      Completo (+Provincial)
-                    </button>
-                  </div>
+                  {/* Indicador de elección distrital */}
+                  <span className="inline-flex items-center px-2 py-1 rounded-lg bg-blue-50 text-[11px] font-bold text-blue-700 border border-blue-200">
+                    Elección Distrital
+                  </span>
                 </div>
               </div>
 
@@ -892,12 +875,7 @@ export default function DigitacionCentralPage() {
                               <tr>
                                 <th className="px-2.5 py-2 w-8 text-center">N°</th>
                                 <th className="px-3 py-2">Partido Político</th>
-                                {columnMode === 'completo' && (
-                                  <th className="px-2 py-2 text-center w-24">Provincial</th>
-                                )}
-                                <th className="px-2 py-2 text-center w-28">
-                                  {columnMode === 'distrital' ? 'Votos Distrital' : 'Distrital'}
-                                </th>
+                                <th className="px-2 py-2 text-center w-28">Votos Distrital</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -926,26 +904,6 @@ export default function DigitacionCentralPage() {
                                         )}
                                       </div>
                                     </td>
-                                    {/* Casilla Provincial (sin flechitas) */}
-                                    {columnMode === 'completo' && (
-                                      <td className="px-2 py-1.5 text-center">
-                                        <input
-                                          type="text"
-                                          inputMode="numeric"
-                                          value={numberValue(result.provincial)}
-                                          onChange={(e) => {
-                                            const val = parsedCount(e.target.value.replace(/\D/g, ''));
-                                            setExtraction({
-                                              ...extraction,
-                                              resultados: extraction.resultados.map((item, i) =>
-                                                i === index ? { ...item, provincial: val } : item,
-                                              ),
-                                            });
-                                          }}
-                                          className="w-20 text-center text-xs font-bold py-1 px-1.5 rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        />
-                                      </td>
-                                    )}
                                     {/* Casilla Distrital (sin flechitas) */}
                                     <td className="px-2 py-1.5 text-center">
                                       <input
@@ -979,19 +937,6 @@ export default function DigitacionCentralPage() {
                                   <td className="px-3 py-2 text-slate-700 text-xs">
                                     {SPECIAL_LABELS[key]}
                                   </td>
-                                  {columnMode === 'completo' && (
-                                    <td className="px-2 py-1.5 text-center">
-                                      <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={numberValue(extraction.especiales[key].provincial)}
-                                        onChange={(e) =>
-                                          updatePair('especiales', key, 'provincial', e.target.value.replace(/\D/g, ''))
-                                        }
-                                        className="w-20 text-center text-xs font-bold py-1 px-1.5 rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                    </td>
-                                  )}
                                   <td className="px-2 py-1.5 text-center">
                                     <input
                                       type="text"
@@ -1012,19 +957,6 @@ export default function DigitacionCentralPage() {
                                 <td className="px-3 py-2.5 uppercase tracking-wide text-xs">
                                   TOTAL DE VOTOS EMITIDOS
                                 </td>
-                                {columnMode === 'completo' && (
-                                  <td className="px-2 py-2 text-center">
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={numberValue(extraction.totalesEmitidos.provincial)}
-                                      onChange={(e) =>
-                                        updatePair('totalesEmitidos', null, 'provincial', e.target.value.replace(/\D/g, ''))
-                                      }
-                                      className="w-20 text-center text-xs font-black py-1 px-1.5 rounded-md border border-blue-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    />
-                                  </td>
-                                )}
                                 <td className="px-2 py-2 text-center">
                                   <input
                                     type="text"

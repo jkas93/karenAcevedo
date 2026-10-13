@@ -77,9 +77,9 @@ const RESPONSE_SCHEMA = {
 };
 
 const PROMPT = `Analiza la imagen electoral del distrito de Chaclacayo (Elecciones Municipales 2026).
-La imagen puede ser:
-1. Una hoja de "CONTEO DE VOTOS ELECCIONES MUNICIPALES 2026 DISTRITO DE CHACLACAYO" (hoja de personero), que contiene una sola columna de "VOTOS". En este caso, asigna los votos extraídos a la columna "distrital" y deja "provincial" en null.
-2. Un acta oficial de escrutinio de la ONPE con dos columnas: "TOTAL DE VOTOS MUNICIPAL PROVINCIAL" y "TOTAL DE VOTOS MUNICIPAL DISTRITAL". En este caso, extrae ambas columnas.
+La imagen corresponde a la elección MUNICIPAL DISTRITAL de Chaclacayo (Campaña Karen Acevedo):
+1. Si es una hoja de "CONTEO DE VOTOS ELECCIONES MUNICIPALES 2026 DISTRITO DE CHACLACAYO" (hoja de personero), contiene una sola columna de "VOTOS". Asigna los votos extraídos a la columna "distrital" y deja "provincial" en null.
+2. Si es un acta oficial de escrutinio de la ONPE, concéntrate de manera prioritaria y estricta en extraer la columna "TOTAL DE VOTOS MUNICIPAL DISTRITAL" asignándola a "distrital", y deja "provincial" siempre en null, ya que el control electoral audita exclusivamente la elección distrital.
 
 La mesa electoral se encuentra en la cabecera ("MESA Nº:"). Extrae el número de mesa.
 En el distrito de Chaclacayo participan exactamente las siguientes 12 organizaciones políticas en este orden oficial:
